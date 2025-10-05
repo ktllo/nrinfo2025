@@ -3,6 +3,7 @@ package org.leolo.nrinfo.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.leolo.nrinfo.model.AuthenticationResult;
+import org.leolo.nrinfo.service.APIAuthenticationService;
 import org.leolo.nrinfo.service.AuthenticationTokenService;
 import org.leolo.nrinfo.service.UserService;
 import org.slf4j.Logger;
@@ -26,9 +27,23 @@ public class UserControlController {
 
     @Autowired private UserService userService;
     @Autowired private AuthenticationTokenService authenticationTokenService;
+    @Autowired private APIAuthenticationService apiAuthenticationService;
+
+    @RequestMapping(value = "/logout", method = RequestMethod.POST)
+    public Object logout() {
+        String token = apiAuthenticationService.getAuthToken();
+        if (token != null) {
+            authenticationTokenService.invalidateToken(token);
+        }
+        TreeMap<String, String> map = new TreeMap<>();
+        map.put("success", "true");
+        map.put("message", "Logout successful");
+        return map;
+    }
 
     @RequestMapping(value = "/login", method = RequestMethod.POST)
     public DeferredResult<ResponseEntity<?>> login(
+            HttpServletRequest request,
             @RequestParam String username,
             @RequestParam String password
     ) {
@@ -40,6 +55,14 @@ public class UserControlController {
                 map.put("success", "false");
                 map.put("message", "Bad request - username or password is empty");
                 deferredResult.setResult(ResponseEntity.badRequest().body(map));
+                return;
+            }
+            if (request.getHeaders("Authorization").hasMoreElements()) {
+                logger.debug("Bad request - already logged in");
+                TreeMap<String, String> map = new TreeMap<>();
+                map.put("success", "false");
+                map.put("message", "Bad request - already logged in");
+                deferredResult.setResult(ResponseEntity.status(HttpServletResponse.SC_CONFLICT).body(map));
                 return;
             }
             AuthenticationResult ar = userService.authenticate(username, password);

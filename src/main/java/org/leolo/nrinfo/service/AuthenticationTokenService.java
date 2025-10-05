@@ -1,5 +1,7 @@
 package org.leolo.nrinfo.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 public class AuthenticationTokenService {
 
     private Hashtable<String, TokenStoreEntry> tokenStore = new Hashtable<String, TokenStoreEntry>();
+    private Logger logger = LoggerFactory.getLogger(AuthenticationTokenService.class);
     @Autowired private ConfigurationService conf;
 
     public String generateTokenForUser(int userId) {
@@ -25,6 +28,29 @@ public class AuthenticationTokenService {
         return token;
     }
 
+    public int getTokenOwner(String token) {
+        TokenStoreEntry entry = tokenStore.get(token);
+        if (entry == null) {
+            return 0;
+        }
+        return entry.userId;
+    }
+
+    public void extendTokenLife(String token) {
+        TokenStoreEntry entry = tokenStore.get(token);
+        long tokenLifeTime = Long.parseLong(conf.getConfiguration("auth.token_life","600")) * 1000;
+        if (entry == null) {
+            logger.info("Invalid token given for extension. No action taken");
+        } else {
+            if (entry.expires > System.currentTimeMillis()) {
+                entry.expires = System.currentTimeMillis() + tokenLifeTime;
+            }
+        }
+    }
+
+    public void invalidateToken(String token) {
+        tokenStore.remove(token);
+    }
 
 
     @Scheduled(fixedRate = 60, timeUnit = TimeUnit.SECONDS)

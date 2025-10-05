@@ -15,6 +15,7 @@ import java.sql.Statement;
 import java.util.TreeMap;
 
 @RestController
+@RequestMapping("/api")
 public class HealthCheckController {
 
     @Autowired private DataSource dataSource;
