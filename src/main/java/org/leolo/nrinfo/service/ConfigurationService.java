@@ -74,7 +74,7 @@ public class ConfigurationService {
             //We get the configuration!
             CacheEntry entry = new CacheEntry(
                     conf.getConfigurationValue(),
-                    System.currentTimeMillis() + conf.getMaxCacheTime(),
+                    System.currentTimeMillis() + (conf.getMaxCacheTime()* 1000L),
                     CacheSource.DATABASE
             );
             cache.put(key, entry);
