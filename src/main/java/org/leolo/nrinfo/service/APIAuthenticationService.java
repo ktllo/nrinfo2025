@@ -15,6 +15,7 @@ import org.springframework.web.context.WebApplicationContext;
 public class APIAuthenticationService {
 
     @Autowired private AuthenticationTokenService authenticationTokenService;
+    @Autowired private UserPermissionService userPermissionService;
     private Logger logger = LoggerFactory.getLogger(APIAuthenticationService.class);
 
     private String authToken;
@@ -32,9 +33,11 @@ public class APIAuthenticationService {
         userId = authenticationTokenService.getTokenOwner(authToken);
         if (userId == 0) {
             authenticated = false;
+            userPermissionService.setUserId(0);
         } else {
             authenticated = true;
             authenticationTokenService.extendTokenLife(authToken);
+            userPermissionService.setUserId(userId);
         }
         logger.info("PHEND: User {} AUTHED {}", userId, authenticated);
     }

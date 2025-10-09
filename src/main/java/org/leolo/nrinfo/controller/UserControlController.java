@@ -2,10 +2,9 @@ package org.leolo.nrinfo.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.leolo.nrinfo.dto.response.PermissionList;
 import org.leolo.nrinfo.model.AuthenticationResult;
-import org.leolo.nrinfo.service.APIAuthenticationService;
-import org.leolo.nrinfo.service.AuthenticationTokenService;
-import org.leolo.nrinfo.service.UserService;
+import org.leolo.nrinfo.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +15,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.async.DeferredResult;
 
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
 @RestController
@@ -28,6 +29,9 @@ public class UserControlController {
     @Autowired private UserService userService;
     @Autowired private AuthenticationTokenService authenticationTokenService;
     @Autowired private APIAuthenticationService apiAuthenticationService;
+    @Autowired private UserPermissionService userPermissionService;
+    @Autowired
+    private PermissionService permissionService;
 
     @RequestMapping(value = "/logout", method = RequestMethod.POST)
     public Object logout() {
@@ -80,5 +84,19 @@ public class UserControlController {
             }
         });
         return deferredResult;
+    }
+
+    @RequestMapping("/users/permission")
+    public ResponseEntity getUserPermissions() {
+        if (!apiAuthenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        Set<String> permissions = userPermissionService.getPermissionList();
+        PermissionList permissionList = new PermissionList();
+        permissionList.setStatus("OK");
+        for (String permission : permissions) {
+            permissionList.getPermissions().add(permissionService.getPermission(permission).convertToDTO());
+        }
+        return ResponseEntity.ok(permissionList);
     }
 }

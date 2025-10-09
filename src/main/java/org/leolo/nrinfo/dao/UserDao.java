@@ -11,6 +11,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Set;
 
 @Repository
 public class UserDao extends BaseDao{
@@ -61,6 +63,40 @@ public class UserDao extends BaseDao{
         ) {
             preparedStatement.setInt(1, userId);
             preparedStatement.executeUpdate();
+        }
+    }
+
+    public Set<String> getPermissionForUser(User user) throws SQLException {
+        return  getPermissionForUser(user.getUserId());
+    }
+
+    public Set<String> getPermissionForUser(int userId) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "select permission_name " +
+                                "from " +
+                                "user_permission up " +
+                                "join permission p ON up.permission_id = p.permission_id " +
+                                "where user_id = ? " +
+                                "union all " +
+                                "select permission_name " +
+                                "from " +
+                                "permission p " +
+                                "join role_permission rp on p.permission_id = rp.permission_id " +
+                                "join user_role ur on rp.role_id = ur.role_id " +
+                                "where user_id = ?"
+                )
+        ) {
+            preparedStatement.setInt(1, userId);
+            preparedStatement.setInt(2, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                Set<String> permissions = new HashSet<>();
+                while (rs.next()) {
+                    permissions.add(rs.getString("permission_name"));
+                }
+                return permissions;
+            }
         }
     }
 
