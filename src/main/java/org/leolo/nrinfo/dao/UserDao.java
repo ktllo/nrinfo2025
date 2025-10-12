@@ -69,6 +69,7 @@ public class UserDao extends BaseDao{
     }
 
     public Set<String> getPermissionForUser(int userId) throws SQLException {
+        logger.debug("getPermissionForUser - {}", userId);
         try (
                 Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(
