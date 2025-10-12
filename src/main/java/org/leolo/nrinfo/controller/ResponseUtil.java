@@ -25,5 +25,8 @@ public class ResponseUtil {
     public static ResponseEntity<Map<String, String>> buildUnauthorizedResponse() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("status","error","message","You must login to use this API"));
     }
+    public static ResponseEntity<Map<String, String>> buildForbiddenResponse() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("status","error","message","You do not have permission to access this resource"));
+    }
 
 }
