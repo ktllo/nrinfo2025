@@ -11,6 +11,7 @@ public class AuthenticationResult {
     private String message;
     private int userId;
     private String username;
+    private boolean forcePasswordChange;
 
     public AuthenticationResult(boolean success, int userId, String username) {
         this.success = success;
@@ -23,6 +24,14 @@ public class AuthenticationResult {
         this.message = message;
         this.userId = userId;
         this.username = username;
+    }
+
+    public AuthenticationResult(boolean success, String message, int userId, String username, boolean forcePasswordChange) {
+        this.success = success;
+        this.message = message;
+        this.userId = userId;
+        this.username = username;
+        this.forcePasswordChange = forcePasswordChange;
     }
 
     public AuthenticationResult() {

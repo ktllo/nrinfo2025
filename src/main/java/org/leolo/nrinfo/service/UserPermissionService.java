@@ -55,11 +55,16 @@ public class UserPermissionService {
         }
     }
 
-    public Set<String> getPermissionList() {
-        TreeSet<String> permissions = new TreeSet<>();
-        if (!hasData) {
-            loadCache();
+    public boolean hasPermission(String permission) {
+        checkCacheAge();
+        synchronized (SYNC_TOKEN) {
+            return permissionCache.contains(permission);
         }
+    }
+
+    public Set<String> getPermissionList() {
+        checkCacheAge();
+        TreeSet<String> permissions = new TreeSet<>();
         synchronized (SYNC_TOKEN) {
             permissions.addAll(permissionCache);
         }
