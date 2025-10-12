@@ -39,7 +39,6 @@ public class APIAuthenticationService {
             authenticationTokenService.extendTokenLife(authToken);
             userPermissionService.setUserId(userId);
         }
-        logger.info("PHEND: User {} AUTHED {}", userId, authenticated);
     }
 
     public String getAuthToken() {

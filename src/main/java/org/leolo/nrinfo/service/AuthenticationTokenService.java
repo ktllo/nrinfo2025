@@ -30,7 +30,7 @@ public class AuthenticationTokenService {
 
     public int getTokenOwner(String token) {
         TokenStoreEntry entry = tokenStore.get(token);
-        if (entry == null) {
+        if (entry == null || entry.expires < System.currentTimeMillis()) {
             return 0;
         }
         return entry.userId;
@@ -57,13 +57,14 @@ public class AuthenticationTokenService {
     public void removeExpiredTokens() {
         HashSet<String> expiredTokens = new HashSet<String>();
         for (TokenStoreEntry entry : tokenStore.values()) {
-            if (entry.expires > System.currentTimeMillis()) {
+            if (entry.expires < System.currentTimeMillis()) {
                 expiredTokens.add(entry.token);
             }
         }
         for (String token : expiredTokens) {
             tokenStore.remove(token);
         }
+        logger.info("Removed {} expired authentication tokens", expiredTokens.size());
     }
 
     private String generateToken() {
