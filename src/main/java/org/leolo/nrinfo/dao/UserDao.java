@@ -1,16 +1,14 @@
 package org.leolo.nrinfo.dao;
 
 import org.leolo.nrinfo.model.User;
+import org.leolo.nrinfo.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -71,6 +69,7 @@ public class UserDao extends BaseDao{
     }
 
     public Set<String> getPermissionForUser(int userId) throws SQLException {
+        logger.debug("getPermissionForUser - {}", userId);
         try (
                 Connection connection = dataSource.getConnection();
                 PreparedStatement preparedStatement = connection.prepareStatement(
@@ -97,6 +96,79 @@ public class UserDao extends BaseDao{
                 }
                 return permissions;
             }
+        }
+    }
+
+    public User getUserById(int userId) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "select * from user where user_id = ?"
+                )
+        ) {
+            preparedStatement.setInt(1, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    return parseUser(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    public void updatePassword(int userId, String hashedPassword) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "update user set password = ?, updated_date = now(), last_password_date=NOW() where user_id = ?"
+                )
+        ){
+            preparedStatement.setString(1, hashedPassword);
+            preparedStatement.setInt(2, userId);
+            preparedStatement.executeUpdate();
+        }
+    }
+
+    public int getUserIdByPasswordResetToken(String token) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT user_id " +
+                                "FROM password_reset_request " +
+                                "WHERE request_key = ? and expiry_date > NOW() and status = 'A'"
+                )
+        ) {
+            ps.setString(1, token);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("user_id");
+                }
+            }
+        }
+        return -1;
+    }
+
+    public void insertPasswordReset(String token, int userId, int validity) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement psOve = connection.prepareStatement(
+                        "delete from password_reset_request  where user_id = ?"
+                );
+                PreparedStatement psIns = connection.prepareStatement(
+                        "insert into password_reset_request (" +
+                                "request_id, request_key, user_id, requested_date, expiry_date, processed_date, status) " +
+                                "values (?, ?, ?, NOW(), NOW() + INTERVAL ? SECOND , null, 'A')"
+                )
+        ) {
+            connection.setAutoCommit(false);
+            psOve.setInt(1, userId);
+            psOve.executeUpdate();
+            psIns.setBytes(1, CommonUtil.uuidToBytes(CommonUtil.generateUUID()));
+            psIns.setString(2, token);
+            psIns.setInt(3, userId);
+            psIns.setInt(4, validity);
+            psIns.executeUpdate();
+            connection.commit();
         }
     }
 
