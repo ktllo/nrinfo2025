@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.util.CommonUtil;
@@ -67,8 +68,8 @@ public class JobDao extends BaseDao{
                         "update job set job_status = 'F', finished_time = now() where job_id = ?"
                 );
                 PreparedStatement psOut = connection.prepareStatement(
-                        "insert into job_output (job_output_id, job_id, output_type, output_data) " +
-                                "values (?, ?, 'E', ?)"
+                        "insert into job_output (job_output_id, job_id, output_type, output_data, message_time) " +
+                                "values (?, ?, 'E', ?, NOW())"
                 )
         ) {
             connection.setAutoCommit(false);
@@ -88,6 +89,25 @@ public class JobDao extends BaseDao{
             psJob.setBytes(1, CommonUtil.uuidToBytes(job.getJobId()));
             psJob.executeUpdate();
             connection.commit();
+        }
+    }
+
+    public void insertMessage(Job job, String message) throws SQLException {
+        insertMessage(job, message, JobMessageType.MESSAGE);
+    }
+    public void insertMessage(Job job, String message, JobMessageType type) throws SQLException {
+        try (
+                Connection connection = datasource.getConnection();
+                PreparedStatement psOut = connection.prepareStatement(
+                        "insert into job_output (job_output_id, job_id, output_type, output_data, message_time) " +
+                                "values (?, ?, ?, ?, NOW())"
+                )
+        ) {
+            psOut.setBytes(1, CommonUtil.uuidToBytes(CommonUtil.generateUUID()));
+            psOut.setBytes(2, CommonUtil.uuidToBytes(job.getJobId()));
+            psOut.setString(3, type.getCode());
+            psOut.setString(4, message);
+            psOut.executeUpdate();
         }
     }
 
