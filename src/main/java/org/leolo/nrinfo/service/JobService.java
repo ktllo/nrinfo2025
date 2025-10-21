@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -30,6 +31,14 @@ public class JobService {
                 Integer.parseInt(configurationService.getConfiguration("job.threadpool.size","5"))
         );
         initialized = true;
+    }
+
+    public void writeMessage(Job job, String message) {
+        try {
+            jobDao.insertMessage(job, message);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public void queueJob(Job job) {

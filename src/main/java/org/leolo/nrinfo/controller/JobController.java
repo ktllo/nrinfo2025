@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.controller;
 
+import org.leolo.nrinfo.job.NaPTANImportJob;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.service.APIAuthenticationService;
@@ -8,6 +9,7 @@ import org.leolo.nrinfo.service.UserPermissionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,6 +27,7 @@ public class JobController {
     @Autowired private JobService jobService;
     @Autowired private APIAuthenticationService authenticationService;
     @Autowired private UserPermissionService userPermissionService;
+    @Autowired private ApplicationContext applicationContext;
 
     @RequestMapping("job/queue/example")
     public ResponseEntity startExampleJob(@RequestParam(name = "sleep", required = false, defaultValue = "60") final int sleepTime) {
@@ -49,6 +52,20 @@ public class JobController {
                     }
                 }
         );
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping({"job/queue/naptan","job/queue/nptg"})
+    public ResponseEntity queueNaPTANJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("LOAD_NAPTAN")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        Job job = applicationContext.getBean(NaPTANImportJob.class);
         job.setJobOwner(authenticationService.getUserId());
         jobService.queueJob(job);
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
