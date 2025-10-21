@@ -86,7 +86,8 @@ public class JobController {
         if (!canViewJob && (job == null || authenticationService.getUserId() != job.getJobOwner())) {
             return ResponseUtil.buildForbiddenResponse();
         }
-        return ResponseEntity.ok(Map.of("result","success","job",job));
+        org.leolo.nrinfo.dto.response.Job jobDTO = org.leolo.nrinfo.dto.response.Job.toDTO(job);
+        return ResponseEntity.ok(Map.of("result","success","job",jobDTO));
     }
 
 }

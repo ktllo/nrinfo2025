@@ -27,7 +27,7 @@ public class JobDao extends BaseDao{
                 PreparedStatement ps = connection.prepareStatement(
                         "insert into job " +
                                 "(job_id, job_owner, job_class, submitted_time, job_status)" +
-                                "values (?, ?, ?, now(), 'S')"
+                                "values (?, ?, ?, now(), 'Q')"
                 )
         ) {
             ps.setBytes(1, CommonUtil.uuidToBytes(job.getJobId()));
