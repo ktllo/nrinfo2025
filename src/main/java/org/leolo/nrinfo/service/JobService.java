@@ -1,6 +1,7 @@
 package org.leolo.nrinfo.service;
 
 import org.leolo.nrinfo.dao.JobDao;
+import org.leolo.nrinfo.dto.request.JobSearch;
 import org.leolo.nrinfo.dto.response.JobMessage;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
@@ -25,6 +26,9 @@ public class JobService {
 
     private ExecutorService executor = null;
     private boolean initialized = false;
+    @Autowired
+    private UserService userService;
+
     private synchronized void init () {
         if (initialized) {
             return;
@@ -92,6 +96,18 @@ public class JobService {
         init();
         try {
             return jobDao.getJobMessages(jobId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Collection<JobRecord> searchJobs(JobSearch searchCriteria) {
+        if (searchCriteria.getUsername()!=null) {
+            searchCriteria.setUserId(userService.getUserByUsername(searchCriteria.getUsername()).getUserId());
+        }
+        init();
+        try {
+            return jobDao.searchJobs(searchCriteria);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
