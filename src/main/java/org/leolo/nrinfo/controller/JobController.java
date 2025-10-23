@@ -87,6 +87,7 @@ public class JobController {
             return ResponseUtil.buildForbiddenResponse();
         }
         org.leolo.nrinfo.dto.response.Job jobDTO = org.leolo.nrinfo.dto.response.Job.toDTO(job);
+        jobDTO.setOutput(jobService.getMessages(jobId));
         return ResponseEntity.ok(Map.of("result","success","job",jobDTO));
     }
 

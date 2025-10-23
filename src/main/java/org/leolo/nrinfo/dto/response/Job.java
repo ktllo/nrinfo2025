@@ -5,6 +5,7 @@ import lombok.Setter;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.Date;
 
 @Getter
@@ -16,6 +17,7 @@ public class Job {
     private Date startTime;
     private Date endTime;
     private String status;
+    private Collection<JobMessage> output;
     public static Job toDTO(org.leolo.nrinfo.model.JobRecord job) {
         Job jobDTO = new Job();
         jobDTO.jobId = job.getJobId().toString();

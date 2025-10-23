@@ -1,6 +1,7 @@
 package org.leolo.nrinfo.service;
 
 import org.leolo.nrinfo.dao.JobDao;
+import org.leolo.nrinfo.dto.response.JobMessage;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -81,6 +83,15 @@ public class JobService {
         init();
         try {
             return jobDao.getJobRecord(jobId);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Collection<JobMessage> getMessages(String jobId) {
+        init();
+        try {
+            return jobDao.getJobMessages(jobId);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

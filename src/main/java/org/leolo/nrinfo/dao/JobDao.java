@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.dto.response.JobMessage;
 import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
@@ -14,6 +15,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.TreeSet;
 import java.util.UUID;
 
 @Repository
@@ -126,6 +130,30 @@ public class JobDao extends BaseDao{
             }
         }
         return null;
+    }
+
+    public Collection<JobMessage> getJobMessages(String jobId) throws Exception {
+        ArrayList<JobMessage> messages = new ArrayList<>();
+        try (
+                Connection connection = datasource.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "select * from job_output where job_id = ? order by message_time"
+                )
+        ) {
+            ps.setBytes(1, CommonUtil.uuidToBytes(UUID.fromString(jobId)));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    messages.add(new JobMessage(
+                            CommonUtil.bytesToUUID(rs.getBytes("job_output_id")).toString(),
+                            jobId,
+                            JobMessageType.fromCode(rs.getString("output_type")),
+                            rs.getString("output_data"),
+                            rs.getTime("message_time")
+                    ));
+                }
+            }
+        }
+        return messages;
     }
 
     private JobRecord parseJobRecord(ResultSet rs) throws SQLException {
