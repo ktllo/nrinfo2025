@@ -22,13 +22,13 @@ public class Job {
     public Job() {
         jobId = CommonUtil.generateUUID();
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        jobClass = stackTraceElements[0].getClassName();
+        jobClass = this.getClass().getName();
         submittedTime = new Date();
     }
     public Job(Runnable job) {
         jobId = CommonUtil.generateUUID();
         StackTraceElement[] stackTraceElements = Thread.currentThread().getStackTrace();
-        jobClass = stackTraceElements[0].getClassName();
+        jobClass = this.getClass().getName();
         submittedTime = new Date();
         this.job = job;
     }
