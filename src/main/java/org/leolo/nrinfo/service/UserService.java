@@ -117,4 +117,12 @@ public class UserService {
     public String generatePasswordResetToken(int userId) {
         return generatePasswordResetToken(userId, Integer.parseInt(configurationService.getConfiguration("pwd_reset.validity","86400")));
     }
+
+    public User getUserByUsername(String username) {
+        try {
+            return userDao.getUserByUsername(username);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

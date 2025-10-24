@@ -1,9 +1,13 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.dto.request.JobSearch;
+import org.leolo.nrinfo.dto.response.JobMessage;
 import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.util.CommonUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
@@ -14,12 +18,16 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.TreeSet;
 import java.util.UUID;
 
 @Repository
 public class JobDao extends BaseDao{
 
     @Autowired private DataSource datasource;
+    private Logger logger = LoggerFactory.getLogger(JobDao.class);
 
     public void insertJob(Job job) throws Exception {
         try (
@@ -27,7 +35,7 @@ public class JobDao extends BaseDao{
                 PreparedStatement ps = connection.prepareStatement(
                         "insert into job " +
                                 "(job_id, job_owner, job_class, submitted_time, job_status)" +
-                                "values (?, ?, ?, now(), 'S')"
+                                "values (?, ?, ?, now(), 'Q')"
                 )
         ) {
             ps.setBytes(1, CommonUtil.uuidToBytes(job.getJobId()));
@@ -126,6 +134,91 @@ public class JobDao extends BaseDao{
             }
         }
         return null;
+    }
+
+    public Collection<JobMessage> getJobMessages(String jobId) throws Exception {
+        ArrayList<JobMessage> messages = new ArrayList<>();
+        try (
+                Connection connection = datasource.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "select * from job_output where job_id = ? order by message_time"
+                )
+        ) {
+            ps.setBytes(1, CommonUtil.uuidToBytes(UUID.fromString(jobId)));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    messages.add(new JobMessage(
+                            CommonUtil.bytesToUUID(rs.getBytes("job_output_id")).toString(),
+                            jobId,
+                            JobMessageType.fromCode(rs.getString("output_type")),
+                            rs.getString("output_data"),
+                            rs.getTime("message_time")
+                    ));
+                }
+            }
+        }
+        return messages;
+    }
+
+    public Collection<JobRecord> searchJobs(JobSearch searchCriteria) throws Exception {
+        if (searchCriteria == null) {
+            throw new IllegalArgumentException("searchCriteria must not be null");
+        }
+        StringBuilder sql = new StringBuilder();
+        sql.append("select * from job where 1=1 ");
+        if (searchCriteria.getFromDate() != null) {
+            sql.append(" and submitted_time >= ? ");
+        }
+        if (searchCriteria.getToDate() != null) {
+            sql.append(" and submitted_time <= ? ");
+        }
+        if (searchCriteria.getUsername() != null) {
+            sql.append(" and job_owner = ? ");
+        }
+        if (searchCriteria.getSortField() != null) {
+            sql.append(" order by ");
+            if (searchCriteria.getSortField().equalsIgnoreCase("jobId")) {
+                sql.append(" job_id");
+            } else if (searchCriteria.getSortField().equalsIgnoreCase("jobClass")) {
+                sql.append(" job_class");
+            } else if (searchCriteria.getSortField().equalsIgnoreCase("submittedTime")) {
+                sql.append(" submitted_time");
+            } else if (searchCriteria.getSortField().equalsIgnoreCase("startTime")) {
+                sql.append(" started_time");
+            } else if (searchCriteria.getSortField().equalsIgnoreCase("endTime")) {
+                sql.append(" finished_time");
+            } else if (searchCriteria.getSortField().equalsIgnoreCase("status")) {
+                sql.append(" case job_status when 'Q' then 1  when 'R' then 2  when 'F' then 3  when 'E' then 4 else 0 end");
+            }
+            sql.append(" ")
+                    .append(searchCriteria.getSortOrder());
+        }
+        sql.append(" limit ?, ?");
+        logger.info("SQL is {}", sql.toString());
+        ArrayList<JobRecord> jobs = new ArrayList<>();
+        try(
+                Connection connection = datasource.getConnection();
+                PreparedStatement ps = connection.prepareStatement(sql.toString())
+        ){
+            int pos = 1;
+            if (searchCriteria.getFromDate() != null) {
+                ps.setTimestamp(pos++, new java.sql.Timestamp(searchCriteria.getFromDate().getTime()));
+            }
+            if (searchCriteria.getToDate() != null) {
+                ps.setTimestamp(pos++, new java.sql.Timestamp(searchCriteria.getToDate().getTime()));
+            }
+            if (searchCriteria.getUsername() != null) {
+                ps.setInt(pos++, searchCriteria.getUserId());
+            }
+            ps.setInt(pos++, searchCriteria.getSkip());
+            ps.setInt(pos++, searchCriteria.getPageSize());
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    jobs.add(parseJobRecord(rs));
+                }
+            }
+        }
+        return jobs;
     }
 
     private JobRecord parseJobRecord(ResultSet rs) throws SQLException {
