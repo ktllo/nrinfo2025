@@ -35,20 +35,20 @@ public class NaPTANImportJob extends AbstractJob {
     @Autowired private NaptanDao naptanDao;
 
     public NaPTANImportJob() {
-        super();
+        super(NaPTANImportJob.class.getName());
     }
 
     @Override public void run() {
         logger.info("NaPTANImportJob started");
         jobService.writeMessage(this, "WARNING : NO BACKUP OF OLD TABLE. ENTRY WILL BE UPSERTED");
         long startTime = System.currentTimeMillis();
-        loadNPTG();
+//        loadNPTG();
         long endTime = System.currentTimeMillis();
         long elapsedTime = endTime - startTime;
         logger.info("Loaded NPTG Locality in {} ms", elapsedTime);
         jobService.writeMessage(this, "NPTG Locality - Done in "+elapsedTime+" ms");
         startTime = System.currentTimeMillis();
-        loadNaPTAN();
+//        loadNaPTAN();
         endTime = System.currentTimeMillis();
         elapsedTime = endTime - startTime;
         logger.info("Loaded NaPTAN stop point in {} ms", elapsedTime);
