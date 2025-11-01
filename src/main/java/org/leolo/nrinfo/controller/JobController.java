@@ -2,6 +2,7 @@ package org.leolo.nrinfo.controller;
 
 import org.leolo.nrinfo.dto.request.JobSearch;
 import org.leolo.nrinfo.job.NaPTANImportJob;
+import org.leolo.nrinfo.job.NetworkRailReferenceDataJob;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.service.APIAuthenticationService;
@@ -67,6 +68,20 @@ public class JobController {
             return ResponseUtil.buildForbiddenResponse();
         }
         Job job = applicationContext.getBean(NaPTANImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping({"job/queue/nrrefdata",})
+    public ResponseEntity queueNetworkRailReferenceData() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_REF_DATA_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        Job job = applicationContext.getBean(NetworkRailReferenceDataJob.class);
         job.setJobOwner(authenticationService.getUserId());
         jobService.queueJob(job);
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
