@@ -72,6 +72,20 @@ public class JobController {
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
     }
 
+    @RequestMapping("job/queue/schedule/full")
+    public ResponseEntity queueFullScheduleImportJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("LOAD_NAPTAN")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        Job job = applicationContext.getBean(NaPTANImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
     @RequestMapping("/job/view/{jobid}")
     public ResponseEntity viewJob(@PathVariable("jobid") final String jobId) {
         if (!authenticationService.isAuthenticated()) {
