@@ -8,7 +8,8 @@ public enum JobMessageType {
     /** This value is added because some data is incorrect */
     @Deprecated
     EXCEPTION_ALIAS_1("E","Exception"),
-    MESSAGE("M","Message");
+    MESSAGE("M","Message"),
+    DATA("D","Data");
 
     private JobMessageType(String code, String displayName) {
 

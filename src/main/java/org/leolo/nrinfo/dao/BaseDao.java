@@ -13,7 +13,7 @@ public abstract class BaseDao {
 
 
     protected void setString(PreparedStatement ps,int pos, String val) throws SQLException {
-        if (val == null || val.isEmpty()) {
+        if (val == null || val.isBlank()) {
             ps.setNull(pos, Types.VARCHAR);
         } else {
             ps.setString(pos, val);
