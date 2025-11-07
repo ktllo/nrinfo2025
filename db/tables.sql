@@ -255,7 +255,7 @@ CREATE TABLE `permission` (
                               `description` text DEFAULT NULL,
                               PRIMARY KEY (`permission_id`),
                               KEY `permission_permission_name_IDX` (`permission_name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -287,6 +287,52 @@ CREATE TABLE `role_permission` (
                                    KEY `role_permission_permission_FK` (`permission_id`),
                                    CONSTRAINT `role_permission_permission_FK` FOREIGN KEY (`permission_id`) REFERENCES `permission` (`permission_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                                    CONSTRAINT `role_permission_role_FK` FOREIGN KEY (`role_id`) REFERENCES `role` (`role_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `schedule_association`
+--
+
+DROP TABLE IF EXISTS `schedule_association`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule_association` (
+                                        `base_uid` char(6) NOT NULL,
+                                        `assoc_uid` char(6) NOT NULL,
+                                        `start_date` date NOT NULL,
+                                        `end_date` date NOT NULL,
+                                        `assoc_days` char(7) NOT NULL,
+                                        `stp_indicator` char(1) NOT NULL,
+                                        `assoc_date` char(1) DEFAULT NULL,
+                                        `assoc_location` char(7) DEFAULT NULL,
+                                        `base_suffix` char(1) DEFAULT NULL,
+                                        `assoc_suffix` varchar(100) DEFAULT NULL,
+                                        `assoc_category` char(1) DEFAULT NULL,
+                                        `assoc_type` char(1) DEFAULT NULL,
+                                        `created_date` datetime NOT NULL,
+                                        PRIMARY KEY (`base_uid`,`assoc_uid`,`start_date`,`end_date`,`assoc_days`,`stp_indicator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tiploc`
+--
+
+DROP TABLE IF EXISTS `tiploc`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tiploc` (
+                          `tiploc_code` char(7) NOT NULL,
+                          `nalco` char(6) DEFAULT NULL,
+                          `stanox` char(5) DEFAULT NULL,
+                          `crs_code` char(3) DEFAULT NULL,
+                          `description` varchar(100) DEFAULT NULL,
+                          `tps_description` varchar(100) DEFAULT NULL,
+                          PRIMARY KEY (`tiploc_code`),
+                          KEY `tiploc_nalco_IDX` (`nalco`) USING BTREE,
+                          KEY `tiploc_stanox_IDX` (`stanox`) USING BTREE,
+                          KEY `tiploc_crs_code_IDX` (`crs_code`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -378,6 +424,39 @@ CREATE TABLE `user_role` (
                              CONSTRAINT `user_role_user_FK` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping routines for database 'nrinfo'
+--
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'IGNORE_SPACE,STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION' */ ;
+/*!50003 DROP FUNCTION IF EXISTS `get_date_mask` */;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = utf8mb4 */ ;
+/*!50003 SET character_set_results = utf8mb4 */ ;
+/*!50003 SET collation_connection  = utf8mb4_general_ci */ ;
+DELIMITER ;;
+CREATE DEFINER=`nrinfo`@`%` FUNCTION `get_date_mask`(val date) RETURNS char(7) CHARSET utf8mb4 COLLATE utf8mb4_bin
+    DETERMINISTIC
+begin
+    return case weekday(val)
+               when 0 then '1______'
+               when 1 then '_1_____'
+               when 2 then '__1____'
+               when 3 then '___1___'
+               when 4 then '____1__'
+               when 5 then '_____1_'
+               when 6 then '______1'
+               else null
+        end;
+end ;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -388,4 +467,4 @@ CREATE TABLE `user_role` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-01 20:02:48
+-- Dump completed on 2025-11-07 11:01:47
