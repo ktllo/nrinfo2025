@@ -4,10 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.leolo.nrinfo.dao.DatabaseOperationResult;
 import org.leolo.nrinfo.dao.TiplocDao;
+import org.leolo.nrinfo.dto.external.networkrail.Association;
+import org.leolo.nrinfo.dto.external.networkrail.Schedule;
 import org.leolo.nrinfo.dto.external.networkrail.Tiploc;
 import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.service.ConfigurationService;
 import org.leolo.nrinfo.service.JobService;
+import org.leolo.nrinfo.service.ScheduleService;
 import org.leolo.nrinfo.service.TiplocService;
 import org.leolo.nrinfo.util.HttpRequestUtil;
 import org.slf4j.Logger;
@@ -42,8 +45,7 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
     private TiplocService tiplocService;
 
     @Autowired private ConfigurationService configurationService;
-    @Autowired
-    private TiplocDao tiplocDao;
+    @Autowired private ScheduleService scheduleService;
 
     @Override
     public void run() {
@@ -63,7 +65,11 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
                 BufferedReader isr = new BufferedReader(new InputStreamReader(new GZIPInputStream(is)))
         ){
             ArrayList<Tiploc> tiplcos = new ArrayList<Tiploc>(batchSize);
+            ArrayList<Association> associations = new ArrayList<>(batchSize);
+            ArrayList<Schedule> schedules = new ArrayList<>(batchSize);
             DatabaseOperationResult reTiploc = new DatabaseOperationResult();
+            DatabaseOperationResult reAssociation = new DatabaseOperationResult();
+            DatabaseOperationResult reSchedule = new DatabaseOperationResult();
             while (true) {
                 String line = isr.readLine();
                 if (line == null) {
@@ -76,6 +82,11 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
                 } else if (messageType.equals("TiplocV1")) {
                     Tiploc tiploc = mapper.convertValue(node.get("TiplocV1"), Tiploc.class);
                     tiplcos.add(tiploc);
+                } else if (messageType.equals("JsonAssociationV1")) {
+                    associations.add(mapper.convertValue(node.get("JsonAssociationV1"), Association.class));
+                } else if (messageType.equals("JsonScheduleV1")) {
+                    Schedule schedule = mapper.convertValue(node.get("JsonScheduleV1"), Schedule.class);
+                    schedules.add(schedule);
                 } else {
                     logger.info("Message type {} is not supported", messageType);
                     break;
@@ -85,10 +96,20 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
                     reTiploc = reTiploc.add(tiplocService.processTiplocBatch(tiplcos));
                     tiplcos.clear();
                 }
+                if (associations.size() >= batchSize) {
+                    reAssociation = reAssociation.add(scheduleService.processAssociationBatch(associations));
+                    associations.clear();
+                }
+                if (schedules.size() >= batchSize) {
+                    reSchedule = reSchedule.add(scheduleService.processScheduleBatch(schedules));
+                    schedules.clear();
+                }
+
             }
             //Process the remaining items
             reTiploc = reTiploc.add(tiplocService.processTiplocBatch(tiplcos));
-
+            reAssociation = reAssociation.add(scheduleService.processAssociationBatch(associations));
+            reSchedule = reSchedule.add(scheduleService.processScheduleBatch(schedules));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

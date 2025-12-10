@@ -15,26 +15,35 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
+import javax.sql.DataSource;
+import java.io.PrintWriter;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
 @Execution(ExecutionMode.SAME_THREAD)
+
 public class TiplocServiceTest {
 
     private Class<org.leolo.nrinfo.dto.external.networkrail.Tiploc> dtoClazz = org.leolo.nrinfo.dto.external.networkrail.Tiploc.class;
 
     private Logger logger = LoggerFactory.getLogger(TiplocServiceTest.class);
-    static MockedTiplocDao mockedTiplocDao = null;
+    @Autowired
+    private static MockedTiplocDao mockedTiplocDao;
 
     private ObjectMapper mapper = new ObjectMapper();
 
@@ -44,13 +53,12 @@ public class TiplocServiceTest {
 
     public static final Tiploc [] TEST_MODEL = {
             new Tiploc("BURGESH", "548300", "87971", "BUG", "BURGESS HILL", "BURGESS HILL"),
-            new Tiploc("ABHL811", "937802", "04311", null, null, "EDINBURGH SIGNAL 811")
+            new Tiploc("ABHL811", "937802", "04311", null, null, "EDINBURGH SIGNAL 811"),
+            new Tiploc("BURGESH", "548300", "87971", "BUG", "BURGESS HILL", "BURGESS HILL STATION"),
     };
 
     @TestConfiguration
     static class TestContextConfiguration {
-
-
         @Bean
         public TiplocDao tiplocDao() {
             if (mockedTiplocDao == null) {
@@ -81,11 +89,30 @@ public class TiplocServiceTest {
     @Test
     public void testBatchFromOne() throws Exception {
         mockedTiplocDao.insertTiploc(TEST_MODEL[1]);
-
         tiplocService.processTiplocBatch(List.of(
                 mapper.convertValue(mapper.readTree(TEST_DATA[0]).get("TiplocV1"), dtoClazz)
         ));
         assertEquals(2, mockedTiplocDao.getSize());
+        assertEquals(TEST_MODEL[0], mockedTiplocDao.getTiplocByTiplocCode("BURGESH"));
+    }
+
+    @Test
+    public void testInsertDuplicate() throws Exception {
+        mockedTiplocDao.insertTiploc(TEST_MODEL[0]);
+        tiplocService.processTiplocBatch(List.of(
+                mapper.convertValue(mapper.readTree(TEST_DATA[0]).get("TiplocV1"), dtoClazz)
+        ));
+        assertEquals(1, mockedTiplocDao.getSize());
+        assertEquals(TEST_MODEL[0], mockedTiplocDao.getTiplocByTiplocCode("BURGESH"));
+    }
+
+    @Test
+    public void testInsertDuplicate2() throws Exception {
+        mockedTiplocDao.insertTiploc(TEST_MODEL[2]);
+        tiplocService.processTiplocBatch(List.of(
+                mapper.convertValue(mapper.readTree(TEST_DATA[0]).get("TiplocV1"), dtoClazz)
+        ));
+        assertEquals(1, mockedTiplocDao.getSize());
         assertEquals(TEST_MODEL[0], mockedTiplocDao.getTiplocByTiplocCode("BURGESH"));
     }
 

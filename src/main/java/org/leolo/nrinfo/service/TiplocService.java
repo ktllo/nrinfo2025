@@ -22,13 +22,15 @@ public class TiplocService {
     public DatabaseOperationResult processTiplocBatch(Collection<org.leolo.nrinfo.dto.external.networkrail.Tiploc> tiplocs) {
         DatabaseOperationResult result = new DatabaseOperationResult();
         ArrayList<Tiploc> toInsert = new ArrayList<Tiploc>(tiplocs.size());
+        ArrayList<Tiploc> toUpdate = new ArrayList<>(tiplocs.size());
+        ArrayList<Tiploc> toDelete = new ArrayList<>(tiplocs.size());
         for (org.leolo.nrinfo.dto.external.networkrail.Tiploc tiploc : tiplocs) {
             if ("Create".equalsIgnoreCase(tiploc.getTransactionType())) {
                 toInsert.add(tiploc.toModel());
             } else if ("update".equalsIgnoreCase(tiploc.getTransactionType())) {
-
+                toUpdate.add(tiploc.toModel());
             } else if ("delete".equalsIgnoreCase(tiploc.getTransactionType())) {
-
+                toDelete.add(tiploc.toModel());
             } else {
                 logger.warn("Unknown transaction type {} for TIPLOC {}", tiploc.getTransactionType(), tiploc.getTiplocCode());
             }
@@ -36,6 +38,8 @@ public class TiplocService {
         //We will be actually performing an upsert for insert because all records are create in a full data load
         try {
             result.add(tiplocDao.upsertTiplocs(toInsert));
+            result.add(tiplocDao.updateTiplocs(toUpdate));
+            result.add(tiplocDao.deleteTiplocs(toDelete));
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

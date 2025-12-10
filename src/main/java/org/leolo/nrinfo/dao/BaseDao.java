@@ -51,4 +51,12 @@ public abstract class BaseDao {
             ps.setTimestamp(pos, new java.sql.Timestamp(val.getTime()));
         }
     }
+
+    protected void setDate(PreparedStatement ps, int pos, java.util.Date val) throws SQLException {
+        if (val == null) {
+            ps.setNull(pos, Types.DATE);
+        } else {
+            ps.setDate(pos, new java.sql.Date(val.getTime()));
+        }
+    }
 }
