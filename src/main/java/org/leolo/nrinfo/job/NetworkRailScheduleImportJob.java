@@ -3,11 +3,9 @@ package org.leolo.nrinfo.job;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.leolo.nrinfo.dao.DatabaseOperationResult;
-import org.leolo.nrinfo.dao.TiplocDao;
 import org.leolo.nrinfo.dto.external.networkrail.Association;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
 import org.leolo.nrinfo.dto.external.networkrail.Tiploc;
-import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.service.ConfigurationService;
 import org.leolo.nrinfo.service.JobService;
 import org.leolo.nrinfo.service.ScheduleService;
@@ -23,9 +21,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.zip.GZIPInputStream;
 
 @Component
@@ -34,8 +30,8 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
 
     private static  Logger logger = LoggerFactory.getLogger(NetworkRailScheduleImportJob.class);
 
-    private String URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_FULL_DAILY&day=toc-full";
-
+    private String FULL_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_FULL_DAILY&day=toc-full";
+    private String DIFF_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_UPDATE_DAILY&day=toc-update-%s";
     private ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
@@ -49,7 +45,7 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
 
     @Override
     public void run() {
-        jobService.writeMessage(this, "Loading Network Rail Schedule from "+URL);
+        jobService.writeMessage(this, "Loading Network Rail Schedule from "+ FULL_URL);
         String nrUsername = configurationService.getString("networkrail.username");
         String nrPassword = configurationService.getString("networkrail.password");
         int batchSize = configurationService.getInt("networkrail.batch_size", 500);
@@ -58,7 +54,7 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
         }
         try (
                 InputStream is = HttpRequestUtil.sendSimpleRequestAsStream(
-                        URL,
+                        FULL_URL,
                         nrUsername,
                         nrPassword
                 );

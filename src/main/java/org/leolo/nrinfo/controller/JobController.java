@@ -88,6 +88,20 @@ public class JobController {
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
     }
 
+    @RequestMapping("job/queue/schedule/diff")
+    public ResponseEntity queueDiffScheduleImportJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_SCHEDULE_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        Job job = applicationContext.getBean(NetworkRailScheduleImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
     @RequestMapping({"job/queue/nrrefdata",})
     public ResponseEntity queueNetworkRailReferenceData() {
         if (!authenticationService.isAuthenticated()) {
