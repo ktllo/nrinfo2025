@@ -34,3 +34,4 @@ build/
 
 ## Configurations
 /src/main/resources/application.properties
+/logs/
