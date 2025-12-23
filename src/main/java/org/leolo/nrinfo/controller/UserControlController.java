@@ -27,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 public class UserControlController {
 
     private Logger logger = LoggerFactory.getLogger(UserControlController.class);
+    private Logger authLogger = LoggerFactory.getLogger("auth");
 
     @Autowired private UserService userService;
     @Autowired private AuthenticationTokenService authenticationTokenService;
@@ -78,6 +79,7 @@ public class UserControlController {
                 map.put("success", "true");
                 map.put("message", ar.getMessage());
                 map.put("token", authenticationTokenService.generateTokenForUser(ar.getUserId()));
+                authLogger.info("SUCCESS;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
                 deferredResult.setResult(ResponseEntity.status(HttpServletResponse.SC_OK).body(map));
             } else if (ar.isSuccess()) {
                 //The username password matches, but password must be changed.
@@ -88,12 +90,14 @@ public class UserControlController {
                         ar.getUserId(),
                         Integer.parseInt(configurationService.getConfiguration("auth.force_pwd_chg_token_age","300"))
                 );
+                authLogger.info("PWDCHGREQ;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
                 map.put("reset-token", resetToken);
                 deferredResult.setResult(ResponseEntity.status(HttpServletResponse.SC_FORBIDDEN).body(map));
             } else {
                 TreeMap<String, String> map = new TreeMap<>();
                 map.put("success", "false");
                 map.put("message", ar.getMessage());
+                authLogger.info("FAILED;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
                 deferredResult.setResult(ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body(map));
             }
         });
