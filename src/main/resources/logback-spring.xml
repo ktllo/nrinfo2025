@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration scan="true">
     <!-- use Spring default values -->
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+<!--    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>-->
+    <conversionRule conversionWord="clr" class="org.springframework.boot.logging.logback.ColorConverter"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [ %clr(%-20.20thread{20}){Purple} %clr(]){faint} %-5level %clr(%-40.40logger{39}){cyan} %clr(:){faint} %msg%ex{2}%n</pattern>
             <charset>utf8</charset>
         </encoder>
     </appender>
