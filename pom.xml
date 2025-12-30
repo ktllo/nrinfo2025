@@ -85,6 +85,16 @@
             <artifactId>geotrellis-proj4_2.12</artifactId>
             <version>2.3.1</version>
         </dependency>
+        <dependency>
+            <groupId>org.pircbotx</groupId>
+            <artifactId>pircbotx</artifactId>
+            <version>2.1</version>
+        </dependency>
+        <dependency>
+        <groupId>com.h2database</groupId>
+        <artifactId>h2</artifactId>
+        <scope>test</scope>
+    </dependency>
     </dependencies>
 
     <build>

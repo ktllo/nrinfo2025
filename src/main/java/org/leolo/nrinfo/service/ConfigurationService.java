@@ -11,9 +11,7 @@ import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Hashtable;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -51,7 +49,12 @@ public class ConfigurationService {
         logger.info("Removed {} expired configuration cache", expiredEntries.size());
     }
 
+    @Deprecated
     public String getConfiguration(String key, String defaultValue) {
+        return _getConfiguration(key, defaultValue);
+    }
+
+    private String _getConfiguration(String key, String defaultValue) {
         //Step 1: Check the cache
         if (cache.containsKey(key)) {
             CacheEntry entry = cache.get(key);
@@ -94,9 +97,73 @@ public class ConfigurationService {
         return defaultValue;
     }
 
+    @Deprecated
     public String getConfiguration(String key) {
         return getConfiguration(key, null);
     }
+
+    public String getString(String key, String defaultValue) {
+        return _getConfiguration(key, defaultValue);
+    }
+
+    public String getString(String key) {
+        return getString(key, null);
+    }
+
+    public int getInt(String key, int defaultValue) {
+        String value = _getConfiguration(key, null);
+        try {
+            return value == null ? defaultValue : Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            logger.warn("Illegal integer value {} for configuration {} - {}", value, key, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    public int getInt(String key) {
+        return getInt(key, 0);
+    }
+
+    public double getDouble(String key, double defaultValue) {
+        String value = _getConfiguration(key, null);
+        try {
+            return value == null ? defaultValue : Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            logger.warn("Illegal double value {} for configuration {} - {}", value, key, e.getMessage());
+            return defaultValue;
+        }
+    }
+
+    public double getDouble(String key) {
+        return getDouble(key, 0);
+    }
+
+    public boolean getBoolean(String key, boolean defaultValue) {
+        String value = _getConfiguration(key, null);
+        if (value == null) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    public boolean getBoolean(String key) {
+        return getBoolean(key, false);
+    }
+
+    public List<String> getList(String key) {
+        return getList(key, ",");
+    }
+
+    public List<String> getList(String key, String delimiter) {
+        List<String> values = new ArrayList<>();
+        String value = _getConfiguration(key, null);
+        if (value != null) {
+            String [] split = value.split(delimiter);
+            values.addAll(Arrays.asList(split));
+        }
+        return values;
+    }
+
 
     private static class CacheEntry {
         String value;

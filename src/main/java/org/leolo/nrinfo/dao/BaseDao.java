@@ -13,7 +13,7 @@ public abstract class BaseDao {
 
 
     protected void setString(PreparedStatement ps,int pos, String val) throws SQLException {
-        if (val == null || val.isEmpty()) {
+        if (val == null || val.isBlank()) {
             ps.setNull(pos, Types.VARCHAR);
         } else {
             ps.setString(pos, val);
@@ -49,6 +49,14 @@ public abstract class BaseDao {
             ps.setNull(pos, Types.TIMESTAMP);
         } else {
             ps.setTimestamp(pos, new java.sql.Timestamp(val.getTime()));
+        }
+    }
+
+    protected void setDate(PreparedStatement ps, int pos, java.util.Date val) throws SQLException {
+        if (val == null) {
+            ps.setNull(pos, Types.DATE);
+        } else {
+            ps.setDate(pos, new java.sql.Date(val.getTime()));
         }
     }
 }

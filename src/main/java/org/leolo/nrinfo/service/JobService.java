@@ -3,6 +3,7 @@ package org.leolo.nrinfo.service;
 import org.leolo.nrinfo.dao.JobDao;
 import org.leolo.nrinfo.dto.request.JobSearch;
 import org.leolo.nrinfo.dto.response.JobMessage;
+import org.leolo.nrinfo.enums.JobMessageType;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.slf4j.Logger;
@@ -46,6 +47,13 @@ public class JobService {
             throw new RuntimeException(e);
         }
     }
+    public void writeMessage(Job job, String message, JobMessageType type) {
+        try {
+            jobDao.insertMessage(job, message, type);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public void queueJob(Job job) {
         init(); //Make sure it is ready
@@ -67,10 +75,11 @@ public class JobService {
             try {
                 job.getJob().run();
             } catch (Throwable t) {
+                log.error("Job {} failed - {}", job.getJobId(), t.getMessage());
                 try {
                     jobDao.markJobFailed(job, t);
                 } catch (Exception e) {
-                    log.error(e.getMessage());
+                    log.error(e.getMessage(),e);
                 }
                 return;
             }
