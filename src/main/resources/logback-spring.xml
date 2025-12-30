@@ -22,8 +22,23 @@
         </rollingPolicy>
     </appender>
 
+    <appender name="applog" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <encoder>
+            <pattern>%d{YYYY-MM-dd HH:mm:ss.SSS} [ %-20.20thread{20} ] %-5level %-40.40logger{39} :%msg%ex{2}%n</pattern>
+            <charset>utf8</charset>
+        </encoder>
+        <file>logs/app.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>logs/app.%d{yyyy-MM-dd}.log</fileNamePattern>
+        </rollingPolicy>
+    </appender>
+
     <logger name="org.leolo" level="debug">
         <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="org.leolo" level="info">
+        <appender-ref ref="applog"/>
     </logger>
 
     <logger name="auth" level="debug">
