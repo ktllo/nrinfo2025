@@ -15,6 +15,18 @@ public class DatabaseOperationResult {
         success = true;
     }
 
+    public void addInserted() {
+        inserted++;
+    }
+
+    public void addUpdated() {
+        updated++;
+    }
+
+    public void addDeleted() {
+        deleted++;
+    }
+
     public DatabaseOperationResult(boolean success, int inserted, int updated, int deleted) {
         this.success = success;
         this.inserted = inserted;

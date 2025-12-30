@@ -2,7 +2,9 @@ package org.leolo.nrinfo.controller;
 
 import org.leolo.nrinfo.dto.request.JobSearch;
 import org.leolo.nrinfo.job.NaPTANImportJob;
+import org.leolo.nrinfo.job.NetworkRailScheduleImportJob;
 import org.leolo.nrinfo.job.NetworkRailReferenceDataJob;
+import org.leolo.nrinfo.job.ScheduleCacheJob;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.service.APIAuthenticationService;
@@ -16,8 +18,10 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Map;
 
 @RestController
@@ -68,6 +72,51 @@ public class JobController {
             return ResponseUtil.buildForbiddenResponse();
         }
         Job job = applicationContext.getBean(NaPTANImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping("job/queue/schedule/full")
+    public ResponseEntity queueFullScheduleImportJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_SCHEDULE_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        Job job = applicationContext.getBean(NetworkRailScheduleImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping("job/queue/schedule/diff")
+    public ResponseEntity queueDiffScheduleImportJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_SCHEDULE_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        NetworkRailScheduleImportJob job = applicationContext.getBean(NetworkRailScheduleImportJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        String url = String.format(NetworkRailScheduleImportJob.DIFF_URL, new SimpleDateFormat("EEE").format(new Date()).toLowerCase());
+        log.info("Job url: {}", url);
+        job.setUrl(url);
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping("job/queue/schedule/build_cache")
+    public ResponseEntity queueScheduleCacheJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_SCHEDULE_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        ScheduleCacheJob job = applicationContext.getBean(ScheduleCacheJob.class);
         job.setJobOwner(authenticationService.getUserId());
         jobService.queueJob(job);
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));

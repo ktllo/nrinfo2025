@@ -79,7 +79,7 @@ public class JobService {
                 try {
                     jobDao.markJobFailed(job, t);
                 } catch (Exception e) {
-                    log.error(e.getMessage());
+                    log.error(e.getMessage(),e);
                 }
                 return;
             }
