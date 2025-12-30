@@ -11,6 +11,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -64,9 +66,28 @@ public class ScheduleService {
         return result;
     }
 
-    @Scheduled(cron = "0 0 22 * * *")
-    public void cacheSchedule() {
+    @Scheduled(cron = "30 0 22 * * *")
+    public void finalizeScheduleCache() {
+        Instant date = Instant.now().truncatedTo(ChronoUnit.DAYS).plus(1, ChronoUnit.DAYS);
+        log.info("Finalize Schedule Cache for {}", date);
+        //Step 1: Rebuild the cache
+        buildScheduleCache(date);
+        //Step 2: Copy over
+        try {
+            scheduleDao.finalizeCache(date);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        log.info("Finalized Schedule Cache for {}", date);
+    }
 
+    public void buildScheduleCache(Instant date) {
+        log.debug("Building schedule cache for {}", date);
+        try {
+            scheduleDao.cacheSchedule(date);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

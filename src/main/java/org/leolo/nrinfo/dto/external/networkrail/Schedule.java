@@ -40,39 +40,40 @@ public class Schedule {
         schedule.setStpIndicator(stpIndicator);
         schedule.setTrainStatus(trainStatus);
         schedule.setBankHolidayRuns(bankHolidayRunning);
-
-        schedule.setTrainCategory(getScheduleSegment().getTrainCategory());
-        schedule.setSignalHeadcode(scheduleSegment.getSignallingId());
-        schedule.setOperator(atocCode);
-        schedule.setRetailHeadcode(scheduleSegment.getHeadCode());
-        schedule.setTrainServiceCode(scheduleSegment.getTrainServiceCode());
-        schedule.setPortionId(scheduleSegment.getBusinessSector());
-        schedule.setPowerType(scheduleSegment.getPowerType());
-        schedule.setTimingLoad(scheduleSegment.getTimingLoad());
-        schedule.setPlannedSpeed(scheduleSegment.getSpeed());
-        schedule.setOperatingCharacteristics(scheduleSegment.getOperatingCharacteristics());
-        schedule.setFirstClass(scheduleSegment.getTrainClass());
-        schedule.setSleeper(scheduleSegment.getSleepers());
-        schedule.setReservations(scheduleSegment.getReservations());
-        schedule.setCatering(scheduleSegment.getCateringCode());
-        if (scheduleSegment.getLocations() != null && !scheduleSegment.getLocations().isEmpty()) {
-            //Convert the entries
-            for (ScheduleLocation location : scheduleSegment.getLocations()) {
-                ScheduleDetail detail = new ScheduleDetail();
-                detail.setLocation(location.getTiplocCode());
-                detail.setLocationInstance(location.getTiplocInstance());
-                detail.setArrivalTime(ScheduleUtil.parseTime(location.getArrivalTime()));
-                detail.setDepartureTime(ScheduleUtil.parseTime(location.getDepartureTime()));
-                detail.setPassTime(ScheduleUtil.parseTime(location.getPassTime()));
-                detail.setPublicArrivalTime(ScheduleUtil.parseTime(location.getPublicArrivalTime()));
-                detail.setPublicDepartureTime(ScheduleUtil.parseTime(location.getPublicDepartureTime()));
-                detail.setPlatform(location.getPlatform());
-                detail.setPath(location.getPath());
-                detail.setLine(location.getLine());
-                detail.setEngineeringAllowance(ScheduleUtil.parseAllowance(location.getEngineeringAllowance()));
-                detail.setPerformanceAllowance(ScheduleUtil.parseAllowance(location.getPerformanceAllowance()));
-                detail.setPathingAllowance(ScheduleUtil.parseAllowance(location.getPathingAllowance()));
-                schedule.getDetailList().add(detail);
+        if (scheduleSegment != null) {
+            schedule.setTrainCategory(scheduleSegment.getTrainCategory());
+            schedule.setSignalHeadcode(scheduleSegment.getSignallingId());
+            schedule.setOperator(atocCode);
+            schedule.setRetailHeadcode(scheduleSegment.getHeadCode());
+            schedule.setTrainServiceCode(scheduleSegment.getTrainServiceCode());
+            schedule.setPortionId(scheduleSegment.getBusinessSector());
+            schedule.setPowerType(scheduleSegment.getPowerType());
+            schedule.setTimingLoad(scheduleSegment.getTimingLoad());
+            schedule.setPlannedSpeed(scheduleSegment.getSpeed());
+            schedule.setOperatingCharacteristics(scheduleSegment.getOperatingCharacteristics());
+            schedule.setFirstClass(scheduleSegment.getTrainClass());
+            schedule.setSleeper(scheduleSegment.getSleepers());
+            schedule.setReservations(scheduleSegment.getReservations());
+            schedule.setCatering(scheduleSegment.getCateringCode());
+            if (scheduleSegment.getLocations() != null && !scheduleSegment.getLocations().isEmpty()) {
+                //Convert the entries
+                for (ScheduleLocation location : scheduleSegment.getLocations()) {
+                    ScheduleDetail detail = new ScheduleDetail();
+                    detail.setLocation(location.getTiplocCode());
+                    detail.setLocationInstance(location.getTiplocInstance());
+                    detail.setArrivalTime(ScheduleUtil.parseTime(location.getArrivalTime()));
+                    detail.setDepartureTime(ScheduleUtil.parseTime(location.getDepartureTime()));
+                    detail.setPassTime(ScheduleUtil.parseTime(location.getPassTime()));
+                    detail.setPublicArrivalTime(ScheduleUtil.parseTime(location.getPublicArrivalTime()));
+                    detail.setPublicDepartureTime(ScheduleUtil.parseTime(location.getPublicDepartureTime()));
+                    detail.setPlatform(location.getPlatform());
+                    detail.setPath(location.getPath());
+                    detail.setLine(location.getLine());
+                    detail.setEngineeringAllowance(ScheduleUtil.parseAllowance(location.getEngineeringAllowance()));
+                    detail.setPerformanceAllowance(ScheduleUtil.parseAllowance(location.getPerformanceAllowance()));
+                    detail.setPathingAllowance(ScheduleUtil.parseAllowance(location.getPathingAllowance()));
+                    schedule.getDetailList().add(detail);
+                }
             }
         }
         return schedule;

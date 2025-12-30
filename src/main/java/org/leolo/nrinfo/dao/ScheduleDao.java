@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 
 @Repository
@@ -240,5 +242,87 @@ public class ScheduleDao extends BaseDao {
         result.setSuccess(true);
         result.addDeleted();
         return result;
+    }
+
+    public Collection<String> getTrainUIDByDate(Instant date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT DISTINCT train_uid FROM schedule WHERE " +
+                                "? BETWEEN start_date AND end_date " +
+                                "AND days_run LIKE get_date_mask(?)"
+                )
+        ) {
+            Collection<String> trainUIDs = new ArrayList<>();
+            ps.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            ps.setDate(2, new java.sql.Date(date.toEpochMilli()));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    trainUIDs.add(rs.getString(1));
+                }
+            }
+            log.info("{} trains UID matched on {}", trainUIDs.size(), date);
+            return trainUIDs;
+        }
+    }
+
+    public void cacheSchedule(Instant date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement psList = connection.prepareStatement(
+                        "SELECT DISTINCT train_uid FROM schedule WHERE " +
+                                "? BETWEEN start_date AND end_date " +
+                                "AND days_run LIKE get_date_mask(?)"
+                );
+                PreparedStatement psUpsert = connection.prepareStatement(
+                        "INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid) " +
+                                "SELECT train_uid, ?, schedule_uuid FROM schedule s " +
+                                "WHERE " +
+                                "train_uid = ? " +
+                                "and ? between start_date and end_date " +
+                                "and days_run LIKE get_date_mask(?)" +
+                                "order by stp_indicator " +
+                                "limit 1 "+
+                                "ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid"
+                )
+        ) {
+            connection.setAutoCommit(false);
+            java.sql.Date startDate = new java.sql.Date(date.toEpochMilli());
+            psList.setDate(1, startDate);
+            psList.setDate(2, startDate);
+            int count = 0;
+            try (ResultSet rsUID = psList.executeQuery()) {
+                while (rsUID.next()) {
+                    psUpsert.setDate(1, startDate);
+                    psUpsert.setString(2, rsUID.getString(1));
+                    psUpsert.setDate(3, startDate);
+                    psUpsert.setDate(4, startDate);
+                    count++;
+                    psUpsert.addBatch();
+                    if (count % 1000 == 0) {
+                        psUpsert.executeBatch();
+                        connection.commit();
+                    }
+                }
+            }
+            psUpsert.executeBatch();
+            connection.commit();
+        }
+    }
+
+    public void finalizeCache(Instant date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO schedule_map_final " +
+                                "(train_uid, schedule_date, schedule_uuid) " +
+                                "SELECT train_uid, schedule_date, schedule_uuid " +
+                                "from schedule_map " +
+                                "where schedule_date = ?"
+                )
+        ){
+            ps.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            ps.executeUpdate();
+        }
     }
 }

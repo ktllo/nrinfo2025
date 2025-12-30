@@ -2,6 +2,8 @@ package org.leolo.nrinfo.job;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import lombok.Setter;
 import org.leolo.nrinfo.dao.DatabaseOperationResult;
 import org.leolo.nrinfo.dto.external.networkrail.Association;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
@@ -30,8 +32,8 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
 
     private static  Logger logger = LoggerFactory.getLogger(NetworkRailScheduleImportJob.class);
 
-    private String FULL_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_FULL_DAILY&day=toc-full";
-    private String DIFF_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_UPDATE_DAILY&day=toc-update-%s";
+    public static final String FULL_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_FULL_DAILY&day=toc-full";
+    public static final  String DIFF_URL = "https://publicdatafeeds.networkrail.co.uk/ntrod/CifFileAuthenticate?type=CIF_ALL_UPDATE_DAILY&day=toc-update-%s";
     private ObjectMapper mapper = new ObjectMapper();
 
     @Autowired
@@ -43,9 +45,13 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
     @Autowired private ConfigurationService configurationService;
     @Autowired private ScheduleService scheduleService;
 
+    @Getter
+    @Setter
+    private String url = FULL_URL;
+
     @Override
     public void run() {
-        jobService.writeMessage(this, "Loading Network Rail Schedule from "+ FULL_URL);
+        jobService.writeMessage(this, "Loading Network Rail Schedule from "+ url);
         String nrUsername = configurationService.getString("networkrail.username");
         String nrPassword = configurationService.getString("networkrail.password");
         int batchSize = configurationService.getInt("networkrail.batch_size", 500);
@@ -54,7 +60,7 @@ public class NetworkRailScheduleImportJob extends AbstractJob {
         }
         try (
                 InputStream is = HttpRequestUtil.sendSimpleRequestAsStream(
-                        FULL_URL,
+                        url,
                         nrUsername,
                         nrPassword
                 );

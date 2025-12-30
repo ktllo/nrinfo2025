@@ -45,7 +45,7 @@
         <appender-ref ref="authlog"/>
     </logger>
 
-    <root level="warn">
-        <appender-ref ref="CONSOLE"/>
+    <root level="error">
+<!--        <appender-ref ref="CONSOLE"/>-->
     </root>
 </configuration>
