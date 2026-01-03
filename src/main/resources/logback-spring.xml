@@ -45,7 +45,7 @@
         <appender-ref ref="applog"/>
     </logger>
 
-    <logger name="org.springframework.boot.SpringApplication" level="info">
+    <logger name="org.springframework" level="info">
         <appender-ref ref="applog"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
