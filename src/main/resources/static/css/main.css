@@ -1,0 +1,54 @@
+/*
+ * For display RAG values
+ */
+.rag_green {
+    background-color: #28a745;
+    color: #ffffff;
+}
+
+.rag_amber {
+    background-color: #fffc07;
+    color: #212529;
+}
+
+.rag_reg {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+body {
+    padding: 0;
+    margin: 0;
+}
+table {
+    border-collapse: collapse;
+}
+h1 {
+    text-align: center;
+    background-color: darkorange;
+    width: 100%;
+    margin: 0;
+}
+.subtitle {
+    font-size: x-large;
+    background-color: darkorange;
+    width: 100%;
+    margin: 0;
+    font-weight: bold;
+}
+.container {
+    width: 100%;
+    margin: 0;
+    border: 1px solid darkorange;
+}
+.tgroup {
+    background-color: orange;
+    font-weight: bold;
+    font-size: large;
+    text-align: center;
+}
+.dlink {
+    text-align: right;
+}
+.banner {
+    background-color: orange;
+}

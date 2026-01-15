@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title th:text="${title}"></title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script src="/scripts/main.js"></script>
+</head>
+<body>
+<h1 th:text="${title}"></h1>
+<div class="banner">
+    <table style="width: 100%">
+        <tr>
+            <th style="width: 30%">Last updated:</th>
+            <td>
+                <span th:text="${ss_time}"></span>
+                (
+                <th:block th:if="${elapse_time.toHours() > 0}">
+                    <span th:text="${elapse_time.toHoursPart()}"></span> hours
+                </th:block>
+                <th:block th:if="${elapse_time.toMinutes() > 0}">
+                    <span th:text="${elapse_time.toMinutesPart()}"></span> minutes
+                </th:block>
+                <span th:text="${elapse_time.toSecondsPart()}"></span> seconds ago
+                )
+            </td>
+        </tr>
+    </table>
+</div>
+<div th:if="${!type.equals('national')}">
+    <a href="/performance">Back to national summary</a>
+</div>
+<div class="subtitle" id="subt_main" onclick="toggle_display('main')">
+    <span id="hint_main" style="margin-left: 1em;margin-right: 1em">-</span><span th:text="${main_subtitle}"</span>
+</div>
+<div class="container" id="cont_main">
+    <table style="width: 100%">
+        <tr>
+            <th style="width: 30%">On time rate:</th>
+            <td><span th:text="${data.getSummary().getRagEmoji()}"></span><span
+                    th:text="${data.getSummary().getOnTimeRate()}"></span>%
+            </td>
+        </tr>
+        <tr th:if="${data.getSummary().getRollingOnTimeRate() > 0}">
+            <th style="width: 30%">Last 2 hours:</th>
+            <td>
+                <span th:text="${data.getSummary().getRollingRagEmoji()}"></span>
+                <span th:text="${data.getSummary().getRollingOnTimeRate()}"></span>%
+                <span th:text="${data.getSummary().getTrendEmoji()}"></span>
+            </td>
+        </tr>
+        <tr th:if="${data.getSummary().getActualTotal() > 0}">
+            <th style="width: 30%">Details</th>
+            <td>
+                <table>
+                    <tr>
+                        <th>On Time</th>
+                        <td style="text-align: right;" th:text="${data.getSummary().getOnTime()}"></td>
+                        <td style="padding-left: 1em; text-align: right;"><span th:text="${data.getSummary().getOnTimePercentage()}"></span>%</td>
+                    </tr>
+                    <tr>
+                        <th>Late</th>
+                        <td style="text-align: right;" th:text="${data.getSummary().getLate()}"></td>
+                        <td style="padding-left: 1em; text-align: right;"><span th:text="${data.getSummary().getLatePercentage()}"></span>%</td>
+                    </tr>
+                    <tr>
+                        <th>Cancel or very late</th>
+                        <td style="text-align: right;" th:text="${data.getSummary().getCancelOrVeryLate()}"></td>
+                        <td style="padding-left: 1em; text-align: right;"><span th:text="${data.getSummary().getCancelOrVeryLatePercentage()}"></span>%</td>
+                    </tr>
+                    <tr>
+                        <th>Total</th>
+                        <td style="text-align: right; border-top-style: double;" th:text="${data.getSummary().getActualTotal()}"></td>
+                        <td style="border-top-style: double; padding-left: 1em; text-align: right;">100.00%</td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</div>
+<div th:if="${data.getSectors().size() > 0}">
+    <div class="subtitle" id="subt_sector" onclick="toggle_display('sector')">
+        <span id="hint_sector" style="margin-left: 1em;margin-right: 1em">-</span><span>Sectors</span>
+    </div>
+    <div class="container" id="cont_sector">
+        <table style="width: 100%">
+            <tbody th:each="sector : ${data.getSectors()}"
+                   th:if="${sector.getOnTimeRate() > 0 || sector.getRollingOnTimeRate() > 0}">
+            <tr>
+                <th colspan="2" class="tgroup" th:text="${sector.getName()}"></th>
+            </tr>
+            <tr th:if="${sector.getOnTimeRate() > 0}">
+                <th style="width: 30%">On time rate:</th>
+                <td><span th:text="${sector.getRagEmoji()}"></span><span th:text="${sector.getOnTimeRate()}"></span>%
+                </td>
+            </tr>
+            <tr th:if="${sector.getRollingOnTimeRate() > 0}">
+                <th style="width: 30%">Last 2 hours:</th>
+                <td>
+                    <span th:text="${sector.getRollingRagEmoji()}"></span>
+                    <span th:text="${sector.getRollingOnTimeRate()}"></span>%
+                    <span th:text="${sector.getTrendEmoji()}"></span>
+                </td>
+            </tr>
+            <tr th:if="${sector.getActualTotal() > 0}">
+                <th style="width: 30%">Details</th>
+                <td>
+                    <table>
+                        <tr>
+                            <th>On Time</th>
+                            <td style="text-align: right;" th:text="${sector.getOnTime()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getOnTimePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Late</th>
+                            <td style="text-align: right;" th:text="${sector.getLate()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getLatePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Cancel or very late</th>
+                            <td style="text-align: right;" th:text="${sector.getCancelOrVeryLate()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getCancelOrVeryLatePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Total</th>
+                            <td style="text-align: right; border-top-style: double;" th:text="${sector.getActualTotal()}"></td>
+                            <td style="border-top-style: double; padding-left: 1em; text-align: right;">100.00%</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div th:if="${data.getOperators().size() > 0}">
+    <div class="subtitle" id="subt_toc" onclick="toggle_display('toc')">
+        <span id="hint_toc" style="margin-left: 1em;margin-right: 1em">-</span><span>Operators on time rate</span>
+    </div>
+    <div class="container" id="cont_toc">
+        <table style="width: 100%">
+            <tbody th:each="sector : ${data.getOperators()}" th:if="${sector.getOnTimeRate() > 0}">
+            <tr>
+                <th colspan="3" class="tgroup" th:text="${sector.getName()}"></th>
+            </tr>
+            <tr>
+                <th style="width: 30%">On time rate:</th>
+                <td><span th:text="${sector.getRagEmoji()}"></span><span th:text="${sector.getOnTimeRate()}"></span>%
+                </td>
+                <td style="width: 20%">
+                    <a th:href="'/performance/operator/'+${sector.getCode()}">Details</a>
+                </td>
+            </tr>
+            <tr th:if="${sector.getActualTotal() > 0 && (sector.getOnTime() > 0 || sector.getLate() > 0 || sector.getCancelOrVeryLate() > 0)}">
+                <th style="width: 30%">Details</th>
+                <td>
+                    <table>
+                        <tr>
+                            <th>On Time</th>
+                            <td style="text-align: right;" th:text="${sector.getOnTime()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getOnTimePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Late</th>
+                            <td style="text-align: right;" th:text="${sector.getLate()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getLatePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Cancel or very late</th>
+                            <td style="text-align: right;" th:text="${sector.getCancelOrVeryLate()}"></td>
+                            <td style="padding-left: 1em; text-align: right;"><span th:text="${sector.getCancelOrVeryLatePercentage()}"></span>%</td>
+                        </tr>
+                        <tr>
+                            <th>Total</th>
+                            <td style="text-align: right; border-top-style: double;" th:text="${sector.getActualTotal()}"></td>
+                            <td style="border-top-style: double; padding-left: 1em; text-align: right;">100.00%</td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="subtitle">Notes</div>
+<div class="container">
+    Please note that the data above only considers the trains arriving at terminus. The summary data, <span style="font-style: italic"> i.e.</span>, On time rate and Last 2 hours, does not consider trains that are cancelled or over 30 minutes late. A train will be consider late if it is over 5, 10 or 15 minutes late at  it final station, depending on the service type. The on time rate reset at 02:00 every day.
+</div>
+<div th:replace="~{fragments/basic.html :: footer}"></div>
+<hr>
+<div>Generated on: <span th:text="${genTime}"></span></div>
+</body>
+</html>
