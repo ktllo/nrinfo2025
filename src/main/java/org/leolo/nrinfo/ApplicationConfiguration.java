@@ -1,6 +1,7 @@
 package org.leolo.nrinfo;
 
 import org.leolo.nrinfo.interceptor.AuthInterceptor;
+import org.leolo.nrinfo.interceptor.WebAuthInterceptor;
 import org.leolo.nrinfo.service.AuthenticationTokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -15,9 +16,12 @@ public class ApplicationConfiguration implements WebMvcConfigurer {
     @Autowired
     private AuthInterceptor authInterceptor;
 
+    @Autowired private WebAuthInterceptor webAuthInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         WebMvcConfigurer.super.addInterceptors(registry);
         registry.addInterceptor(authInterceptor).addPathPatterns("/api/**");
+        registry.addInterceptor(webAuthInterceptor).addPathPatterns("/**").excludePathPatterns("/api/**");
     }
 }

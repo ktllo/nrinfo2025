@@ -21,7 +21,7 @@
         </encoder>
         <file>logs/auth.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>logs/auth.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/auth.%d{yyyy-MM-dd}.log.gz</fileNamePattern>
         </rollingPolicy>
     </appender>
 
@@ -54,7 +54,13 @@
         <appender-ref ref="authlog"/>
     </logger>
 
-    <root level="error">
+    <logger name="org.thymeleaf" level="debug">
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="org.thymeleaf.TemplateEngine.CONFIG" level="OFF"/>
+
+    <root level="warn">
 <!--        <appender-ref ref="CONSOLE"/>-->
     </root>
 </configuration>

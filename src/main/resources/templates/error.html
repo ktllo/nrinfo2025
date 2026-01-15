@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Oops...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+</head>
+<body>
+    <h1>
+        Sorry, there are error when processing your request
+    </h1>
+    <p th:if="${message != null}">
+        Technical information: <span th:text="${message}"></span>
+    </p>
+</body>
+</html>

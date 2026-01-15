@@ -1,6 +1,8 @@
 package org.leolo.nrinfo.controller;
 
-import org.leolo.nrinfo.dto.response.PerformanceMetric;
+import org.leolo.nrinfo.dto.response.PerformanceData;
+import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
+import org.leolo.nrinfo.service.PermissionService;
 import org.leolo.nrinfo.service.RealTimePerformanceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +23,13 @@ public class PerformanceController {
 
     @Autowired
     private RealTimePerformanceService realTimePerformanceService;
+    @Autowired
+    private PermissionService permissionService;
+
     @RequestMapping("national")
     public ResponseEntity getNationalPerformance() {
         log.info("getting national performance");
-        RealTimePerformanceService.RealTimePerformanceSnapshot snapshot = realTimePerformanceService.getSnapshot();
+        RealTimePerformanceSnapshot snapshot = realTimePerformanceService.getSnapshot();
         if (snapshot == null) {
             log.info("No snapshot available!");
 
@@ -33,13 +38,10 @@ public class PerformanceController {
                     "message", "No recent performance data received yet"
             ));
         }
-        PerformanceMetric pm = new PerformanceMetric();
-        pm.setName("National");
-        pm.setOnTimeRate(snapshot.getNationalPerformance().getPpmValue());
-        pm.setRag(snapshot.getNationalPerformance().getRagValue().name());
+        PerformanceData pd = realTimePerformanceService.getNationalPerformanceData(snapshot);
         return ResponseEntity.ok(Map.of(
                 "result","success",
-                "PPMData", pm,
+                "PPMData", pd,
                 "update_time", snapshot.getSnapshotTime(),
                 "resp_time", Instant.now()
         ));
