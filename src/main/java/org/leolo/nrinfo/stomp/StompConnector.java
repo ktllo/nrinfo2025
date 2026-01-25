@@ -81,6 +81,9 @@ public class StompConnector {
             logger.warn("Already connected");
             return;
         }
+        if (!configService.getBoolean("network.stomp.enabled")) {
+            return;
+        }
         logger.info("Preparing STOMP connection to NetworkRail");
         dataStreamHealthService.registerSource(STREAM_TYPE,"Network Rail data stream");
         connectionThread = new Thread(() -> {
