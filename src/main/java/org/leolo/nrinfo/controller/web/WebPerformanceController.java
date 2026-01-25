@@ -30,7 +30,7 @@ public class WebPerformanceController {
         if (snapshot == null) {
             logger.warn("No real time performance snapshot found");
             model.addAttribute("message","No data received yet");
-            return "error";
+            return "error_";
         }
         PerformanceData pd = realTimePerformanceService.getNationalPerformanceData(snapshot);
         model.addAttribute("type", "national");
@@ -49,13 +49,13 @@ public class WebPerformanceController {
         if (snapshot == null) {
             logger.warn("No real time performance snapshot found");
             model.addAttribute("message","No data received yet");
-            return "error";
+            return "error_";
         }
         PerformanceEntry pe = snapshot.getOperatorDetails().get(opc);
         if (pe == null) {
             logger.warn("Operator {} not found", opc);
             model.addAttribute("message","Operator not found");
-            return "error";
+            return "error_";
         }
         model.addAttribute("type", "operator");
         model.addAttribute("message","Not implemented yet");

@@ -130,10 +130,11 @@ public class StompConnector {
                 long now = Instant.now().toEpochMilli();
                 long runningTime = now - connectedTime.toEpochMilli();
                 if (runningTime > 300_000) {
+                    logger.warn("Reseting wait timer");
                     retryWait = 1000;
                 }
                 try {
-                    logger.warn("There are issue with STOMP connection. Sleeping for {} ms", retryWait);
+                    logger.warn("There are issue with STOMP connection. Sleeping for {} ms. Connection age was {}s", retryWait, runningTime/1000);
                     Thread.sleep(retryWait);
                 } catch (InterruptedException e) {
                     logger.error(e.getMessage(), e);

@@ -2,6 +2,7 @@ package org.leolo.nrinfo.cron;
 
 import org.leolo.nrinfo.job.NetworkRailScheduleImportJob;
 import org.leolo.nrinfo.job.ScheduleCacheJob;
+import org.leolo.nrinfo.job.SchedulePruneJob;
 import org.leolo.nrinfo.service.ConfigurationService;
 import org.leolo.nrinfo.service.JobService;
 import org.leolo.nrinfo.service.UserService;
@@ -44,5 +45,13 @@ public class ScheduleCronJobs {
         ScheduleCacheJob job = applicationContext.getBean(ScheduleCacheJob.class);
         job.setJobOwner(userService.getUserByUsername(configurationService.getString("system_job_runner")).getUserId());
         jobService.queueJob(job);
+    }
+
+    @Scheduled(cron = "0 30 0 * * *")
+    public void pruneSchedule() {
+        SchedulePruneJob job = applicationContext.getBean(SchedulePruneJob.class);
+        job.setJobOwner(userService.getUserByUsername(configurationService.getString("system_job_runner")).getUserId());
+        jobService.queueJob(job);
+
     }
 }
