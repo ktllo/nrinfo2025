@@ -325,4 +325,63 @@ public class ScheduleDao extends BaseDao {
             ps.executeUpdate();
         }
     }
+
+    public void pruneCache(Instant date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement psMain = connection.prepareStatement(
+                        "DELETE FROM schedule_map WHERE schedule_date < ?"
+                );
+                PreparedStatement psFinal = connection.prepareStatement(
+                        "DELETE FROM schedule_map_final WHERE schedule_date < ?"
+                )
+        ) {
+            psMain.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            psFinal.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            connection.setAutoCommit(false);
+            psMain.executeUpdate();
+            psFinal.executeUpdate();
+            connection.commit();
+        }
+    }
+
+    public void pruneSchedule(Instant date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                // Delete association first
+                PreparedStatement psAssoc = connection.prepareStatement(
+                        "DELETE FROM schedule_association " +
+                                "where " +
+                                "   end_date < ? "
+                );
+                // Delete details
+                PreparedStatement psDetail = connection.prepareStatement(
+                        "DELETE FROM schedule_details " +
+                                "where exists(" +
+                                "SELECT 1 " +
+                                "FROM schedule s " +
+                                "WHERE" +
+                                "   s.end_date < ? " +
+                                "   and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = s.schedule_uuid)" +
+                                ")"
+                );
+                // Finally delete the main record
+                PreparedStatement psSchedule = connection.prepareStatement(
+                        "DELETE FROM schedule " +
+                                "WHERE " +
+                                "   end_date < ? " +
+                                "   and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = schedule.schedule_uuid)"
+                )
+        ) {
+            connection.setAutoCommit(false);
+            psAssoc.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            psDetail.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            psSchedule.setDate(1, new java.sql.Date(date.toEpochMilli()));
+            int assoc = psAssoc.executeUpdate();
+            int detail = psDetail.executeUpdate();
+            int schedule = psSchedule.executeUpdate();
+            connection.commit();
+            log.info("Deleted: {} Association, {} Schedule, {} detail record, {} in total", assoc, schedule, detail, assoc + schedule + detail);
+        }
+    }
 }

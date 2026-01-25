@@ -90,4 +90,12 @@ public class ScheduleService {
         }
     }
 
+    public void pruneSchedule(Instant cutoff) {
+        try {
+            scheduleDao.pruneSchedule(cutoff);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

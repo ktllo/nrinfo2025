@@ -1,10 +1,7 @@
 package org.leolo.nrinfo.controller;
 
 import org.leolo.nrinfo.dto.request.JobSearch;
-import org.leolo.nrinfo.job.NaPTANImportJob;
-import org.leolo.nrinfo.job.NetworkRailScheduleImportJob;
-import org.leolo.nrinfo.job.NetworkRailReferenceDataJob;
-import org.leolo.nrinfo.job.ScheduleCacheJob;
+import org.leolo.nrinfo.job.*;
 import org.leolo.nrinfo.model.Job;
 import org.leolo.nrinfo.model.JobRecord;
 import org.leolo.nrinfo.service.APIAuthenticationService;
@@ -117,6 +114,20 @@ public class JobController {
             return ResponseUtil.buildForbiddenResponse();
         }
         ScheduleCacheJob job = applicationContext.getBean(ScheduleCacheJob.class);
+        job.setJobOwner(authenticationService.getUserId());
+        jobService.queueJob(job);
+        return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
+    }
+
+    @RequestMapping("job/queue/schedule/prune")
+    public ResponseEntity queueSchedulePruneJob() {
+        if (!authenticationService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        if (!userPermissionService.hasPermission("NR_SCHEDULE_LOAD")) {
+            return ResponseUtil.buildForbiddenResponse();
+        }
+        AbstractJob job = applicationContext.getBean(SchedulePruneJob.class);
         job.setJobOwner(authenticationService.getUserId());
         jobService.queueJob(job);
         return ResponseEntity.ok(Map.of("result","success","jobId",job.getJobId()));
