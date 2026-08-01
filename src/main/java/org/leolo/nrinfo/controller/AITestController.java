@@ -2,16 +2,8 @@ package org.leolo.nrinfo.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openai.client.OpenAIClient;
-import com.openai.client.okhttp.OpenAIOkHttpClient;
-import com.openai.models.ChatModel;
-import com.openai.models.completions.Completion;
-import com.openai.models.completions.CompletionCreateParams;
-import com.openai.models.completions.CompletionUsage;
-import com.openai.models.responses.Response;
-import com.openai.models.responses.ResponseCreateParams;
-import com.openai.models.responses.ResponseUsage;
 import lombok.Getter;
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.model.PerformanceEntry;
 import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
 import org.leolo.nrinfo.model.ai.CompletionResult;
@@ -60,7 +52,7 @@ public class AITestController {
             return Map.of("message","Operator not found");
         }
         PerformanceSummaryData psd = new PerformanceSummaryData();
-        psd.snaphotTime = new Date(snapshot.getSnapshotTime().getEpochSecond());
+        psd.snapshotTime = new Date(snapshot.getSnapshotTime().getEpochSecond());
         psd.operatorName = pe.getName();
         psd.threshold = pe.getThreshold();
         psd.sectors = new LinkedList<>();
@@ -81,28 +73,13 @@ public class AITestController {
             throw new RuntimeException(e);
         }
         //Step 2: Build Prompt
-        String SystemPrompt = """
-                Generate a brief summary of the performance of the following train operators
-                
-                ## Rules
-                * DO NOT explain background info
-                * Do not quote exact numbers, you may quite percentage
-                * Do not ask further questions
-                
-                ## Background info
-                * Data are based on the arrival time at final destination
-                * Threshold expressed in minutes
-                * Threshold is 0 means missing data
-                * Delay in exceed of 2 hours are considered as cancelled
-                * Data only includes trains departs after 02:00 today
-                * 90% on time is bad
-                """;
+
 
         String userPrompt = "```json" + "\n" +
                 jsonString + "\n" +
                 "```" + "\n";
         List<Prompt> prompts = List.of(
-                new SystemPrompt(SystemPrompt),
+                new SystemPrompt(Constants.AIPrompt.SYSTEM_PERFORMANCE_SUMMARY),
                 new UserPrompt(userPrompt)
         );
         CompletionResult result = aiGenerationService.doCompletion(prompts, 5000);
@@ -115,7 +92,7 @@ public class AITestController {
         String operatorName;
         int threshold;
         Collection<SectorSummaryData> sectors;
-        Date snaphotTime;
+        Date snapshotTime;
     }
 
     @Getter

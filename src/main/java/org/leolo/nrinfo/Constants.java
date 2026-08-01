@@ -16,4 +16,24 @@ public class Constants {
     public static class Model {
         public static final String GENERIC_POPUP_MESSAGE = "generic_popup_message";
     }
+
+    public static class AIPrompt {
+        public static final String SYSTEM_PERFORMANCE_SUMMARY = """
+                Generate a brief summary of the performance of the following train operators
+                
+                ## Rules
+                * DO NOT explain background info
+                * Do not quote exact numbers, you may quite percentage
+                * Do not ask further questions
+                
+                ## Background info
+                * Data are based on the arrival time at final destination
+                * Threshold expressed in minutes
+                * Threshold is 0 means missing data
+                * Delay in exceed of 2 hours are considered as cancelled
+                * Data only includes trains departs after 02:00 today
+                * 90% on time is bad
+                * Snapshot time is Unix timestamp
+                """;
+    }
 }
