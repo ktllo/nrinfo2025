@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.Serializable;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
 
@@ -116,11 +117,16 @@ public class PerformanceController {
                     new UserPrompt(userPrompt)
             );
             completionResult = aiGenerationService.doCompletion(prompts, 5000);
-            genericCacheService.addToCache(NATIONAL_SUMMARY, completionResult, 60000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+            genericCacheService.addToCache(NATIONAL_SUMMARY, completionResult, 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
         }
 
         String resultString = completionResult.getChoices()!=null?completionResult.getChoices().getFirst() : "Unable to create a brief summary";
-        return ResponseEntity.ok(Map.of("message",resultString));
+        return ResponseEntity.ok(Map.of(
+                "message",resultString,
+                "generated", new SimpleDateFormat("HH:mm:ss").format(new Date(completionResult.getCreatedTime().toEpochMilli())),
+                "token_used", completionResult.getTotalTokens(),
+                "time_taken", completionResult.getTimeTaken()
+        ));
     }
 
     @Getter

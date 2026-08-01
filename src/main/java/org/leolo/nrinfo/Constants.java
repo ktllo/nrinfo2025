@@ -25,6 +25,7 @@ public class Constants {
                 * DO NOT explain background info
                 * Do not quote exact numbers, you may quite percentage
                 * Do not ask further questions
+                * Always give short comments
                 
                 ## Background info
                 * Data are based on the arrival time at final destination

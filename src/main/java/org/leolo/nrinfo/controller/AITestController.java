@@ -83,7 +83,7 @@ public class AITestController {
                 new UserPrompt(userPrompt)
         );
         CompletionResult result = aiGenerationService.doCompletion(prompts, 5000);
-        String resultString = result.getResult()!=null?result.getResult().getFirst() : "Unable to create a brief summary";
+        String resultString = result.getChoices()!=null?result.getChoices().getFirst() : "Unable to create a brief summary";
         return Map.of("message",resultString);
     }
 
