@@ -119,7 +119,7 @@ public class PerformanceController {
             genericCacheService.addToCache(NATIONAL_SUMMARY, completionResult, 60000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
         }
 
-        String resultString = completionResult.getResult()!=null?completionResult.getResult().getFirst() : "Unable to create a brief summary";
+        String resultString = completionResult.getChoices()!=null?completionResult.getChoices().getFirst() : "Unable to create a brief summary";
         return ResponseEntity.ok(Map.of("message",resultString));
     }
 
