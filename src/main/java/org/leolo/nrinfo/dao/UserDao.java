@@ -5,6 +5,7 @@ import org.leolo.nrinfo.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
@@ -169,6 +170,79 @@ public class UserDao extends BaseDao{
             psIns.setInt(4, validity);
             psIns.executeUpdate();
             connection.commit();
+        }
+    }
+
+    public int getInviteKeyUseLeft(String inviteKey) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "select invite_keys.use_left from invite_keys where invite_key = ? and (expiry_date > NOW() or expiry_date is null)"
+                )
+        ) {
+            preparedStatement.setString(1, inviteKey);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                if (rs.next()) {
+                    int useLeft = rs.getInt("use_left");
+                    if (useLeft > 0) {
+                        return useLeft;
+                    }
+                    return Integer.MAX_VALUE;
+                }
+            }
+        }
+        logger.info("No matching key found");
+        return -1;
+    }
+
+    public int createUser(String userName, String hashedPassword) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        "INSERT INTO user (" +
+                                "username, password, last_password_date, created_date, updated_date," +
+                                "force_password_change, last_login, failed_login_count, last_failed_login)" +
+                                "values (" +
+                                "?,?, NOW(), now(), now()," +
+                                "0, null,0,null" +
+                                ")",
+                        Statement.RETURN_GENERATED_KEYS
+                )
+        ) {
+            preparedStatement.setString(1, userName);
+            preparedStatement.setString(2, hashedPassword);
+            preparedStatement.executeUpdate();
+            try (ResultSet rs = preparedStatement.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return -1;
+    }
+
+    public boolean addRole(int userId, String role) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement psRoleId = connection.prepareStatement(
+                        "select role_id from role where role_name = ?"
+                );
+                PreparedStatement psInsert = connection.prepareStatement(
+                        "INSERT INTO user_role (user_id, role_id) VALUES (?,?)"
+                )
+        ) {
+            psRoleId.setString(1, role);
+            try (ResultSet rs = psRoleId.executeQuery()) {
+                if (rs.next()) {
+                    int roleId = rs.getInt("role_id");
+                    psInsert.setInt(1, userId);
+                    psInsert.setInt(2, roleId);
+                    return psInsert.executeUpdate() > 0;
+                } else {
+                    logger.info("Role {} not found", role);
+                    return false;
+                }
+            }
         }
     }
 

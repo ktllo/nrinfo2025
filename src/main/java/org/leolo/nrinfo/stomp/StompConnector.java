@@ -8,12 +8,15 @@ import org.leolo.nrinfo.service.ConfigurationService;
 import org.leolo.nrinfo.service.DataStreamHealthService;
 import org.leolo.nrinfo.stomp.consumer.MessageConsumer;
 import org.leolo.nrinfo.stomp.consumer.RealTimePerformanceMessageConsumer;
+import org.leolo.nrinfo.stomp.consumer.SampleConsumer;
+import org.leolo.nrinfo.stomp.consumer.VstpScheduleMessageConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.env.Environment;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -54,6 +57,9 @@ public class StompConnector {
 
     public static final String STREAM_TYPE = "NETWORK_RAIL";
 
+    @Autowired
+    private Environment env;
+
     public StompConnector(
             @Autowired ConfigurationService configService,
             @Autowired ApplicationContext applicationContext,
@@ -68,6 +74,8 @@ public class StompConnector {
     private void _initMap() {
         consumerMap = new HashMap<>();
         consumerMap.put("RTPPM_ALL", applicationContext.getBean(RealTimePerformanceMessageConsumer.class));
+        consumerMap.put("VSTP_ALL", applicationContext.getBean(VstpScheduleMessageConsumer.class));
+        consumerMap.put("TRAIN_MVT_ALL_TOC", applicationContext.getBean(SampleConsumer.class));
     }
 
 
@@ -86,6 +94,13 @@ public class StompConnector {
         }
         logger.info("Preparing STOMP connection to NetworkRail");
         dataStreamHealthService.registerSource(STREAM_TYPE,"Network Rail data stream");
+        String [] profiles = env.getActiveProfiles();
+        final String PROFILE;
+        if (profiles.length > 0) {
+            PROFILE = profiles[0];
+        } else {
+            PROFILE = "undef";
+        }
         connectionThread = new Thread(() -> {
             while(true) {
                 try {
@@ -101,11 +116,22 @@ public class StompConnector {
                     HashMap<String, String> subHeader = new HashMap<String, String>();
                     String host = InetAddress.getLocalHost().getHostAddress();
                     logger.info("Hostname : {}", host);
-                    subHeader.put("activemq.subscriptionName", host + "-rtppm");//TODO: Add a pseudorandom ID per restart
+                    subHeader.put("activemq.subscriptionName", host +"-" + PROFILE + "-rtppm");
                     stompConnection.subscribe("/topic/RTPPM_ALL",
                             Stomp.Headers.Subscribe.ACK_MODE,
                             subHeader
                     );
+                    subHeader.put("activemq.subscriptionName", host +"-" + PROFILE + "-vstp");
+                    stompConnection.subscribe("/topic/VSTP_ALL",
+                            Stomp.Headers.Subscribe.ACK_MODE,
+                            subHeader
+                    );
+//                    subHeader.put("activemq.subscriptionName", host +"-" + PROFILE + "-mvt");
+//                    stompConnection.subscribe("/topic/TRAIN_MVT_ALL_TOC",
+//                            Stomp.Headers.Subscribe.ACK_MODE,
+//                            subHeader
+//                    );
+                    logger.info("Subscribed to topics");
                     dataStreamHealthService.setConnectionStatus(STREAM_TYPE, DataStreamHealthService.ConnectionStatus.CONNECTED);
                     connectedTime = Instant.now();
                     while (true) {

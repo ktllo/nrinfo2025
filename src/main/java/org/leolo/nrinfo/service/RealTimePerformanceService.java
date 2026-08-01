@@ -79,6 +79,13 @@ public class RealTimePerformanceService {
             snapshot.getNationalOperator().put(pe.getCode(), pe);
         }
         for (RealTimePerformanceData.OperatorPage op : rtp.getRtppmData().getOperatorPages()) {
+            int threshold = 0;
+            if(op.getPerformanceTolerance() != null) {
+                for (RealTimePerformanceData.PerformanceTolerance pt : op.getPerformanceTolerance()) {
+                    threshold = pt.getTimeband();
+                    break;
+                }
+            }
             PerformanceEntry pe = PerformanceEntry.builder()
                     .code(op.getOperatorPerformanceDetail().getCode())
                     .name(op.getOperatorPerformanceDetail().getName())
@@ -91,6 +98,7 @@ public class RealTimePerformanceService {
                     .rollingPpmValue(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getValue())
                     .rollingRagValue(RAG.get(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getRag()))
                     .trend(Trend.get(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getTrend()))
+                    .threshold(threshold)
                     .build();
             if (op.getOperatorServiceGroup()!=null) {
                 pe.setSubentry(new ArrayList<>());

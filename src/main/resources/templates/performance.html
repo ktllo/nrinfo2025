@@ -7,9 +7,25 @@
     <title th:text="${title}"></title>
     <script th:replace="~{fragments/basic.html :: jquery}"></script>
     <script src="/scripts/main.js"></script>
+    <script>
+        function dispAiSummary() {
+            var operatorId = [[${code}]];
+            $("#butgen").hide();
+            $("#aisummary_disp").text("Generating. This may take a few moments.");
+            $.ajax({
+                type: "GET",
+                url: "/ai/performance/summary/"+operatorId,
+                success: function (data) {
+                    var dispMsg = data.result;
+                    $("#aisummary_disp").html(dispMsg);
+                }
+            });
+        }
+    </script>
 </head>
 <body>
 <h1 th:text="${title}"></h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
 <div class="banner">
     <table style="width: 100%">
         <tr>
@@ -79,6 +95,16 @@
             </td>
         </tr>
     </table>
+</div>
+<div th:if="${!type.equals('national')}">
+    <div class="subtitle" id="subt_aisummary" onclick="toggle_display('aisummary')">
+        <span id="hint_aisummary" style="margin-left: 1em;margin-right: 1em">-</span><span>AI Summary</span>
+    </div>
+    <div class="container" id="cont_aisummary" style="padding-left: 1em;">
+        <button id="butgen" onclick="dispAiSummary()">Generate</button>
+        <div id="aisummary_disp"></div>
+        <div id="aisummary_detail"></div>
+    </div>
 </div>
 <div th:if="${data.getSectors().size() > 0}">
     <div class="subtitle" id="subt_sector" onclick="toggle_display('sector')">

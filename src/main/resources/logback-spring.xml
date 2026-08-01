@@ -45,7 +45,17 @@
         <appender-ref ref="applog"/>
     </logger>
 
+    <logger name="WEB" level="debug">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="applog"/>
+    </logger>
+
     <logger name="org.springframework" level="info">
+        <appender-ref ref="applog"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <logger name="org.apache.catalina.core" level="info">
         <appender-ref ref="applog"/>
         <appender-ref ref="CONSOLE"/>
     </logger>

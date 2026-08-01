@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.dto.response.StationSearchResult;
 import org.leolo.nrinfo.model.Tiploc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +12,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 
 @Repository
 public class TiplocDao extends BaseDao{
@@ -149,6 +152,81 @@ public class TiplocDao extends BaseDao{
         tiploc.setShortDescription(rs.getString("description"));
         tiploc.setDescription(rs.getString("tps_description"));
         return tiploc;
+    }
+
+    public List<StationSearchResult> doSimpleSearch(String query, int maxSize, int offSet) throws SQLException {
+        query = query.toUpperCase();
+        String processedQuery = query+"%";
+        List<StationSearchResult> results = new ArrayList<StationSearchResult>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                                ( 
+                                  SELECT tiploc_code, crs_code, tps_description, 0 AS rank 
+                                  FROM tiploc 
+                                  WHERE crs_code = ? 
+                                )
+                                UNION ALL 
+                                ( 
+                                  SELECT tiploc_code, crs_code, tps_description, 1 AS rank
+                                  FROM tiploc\s
+                                  WHERE crs_code IS NOT NULL
+                                    AND tps_description = ?
+                                    AND crs_code <> ?
+                                )
+                                UNION ALL
+                                (
+                                  SELECT tiploc_code, crs_code, tps_description, 2 AS rank
+                                  FROM tiploc
+                                  WHERE crs_code IS NOT NULL
+                                    AND tps_description LIKE ?
+                                    AND crs_code <> ?
+                                ) 
+                                ORDER BY rank, tps_description
+                                LIMIT ?,?
+                                """
+                )
+        ) {
+            ps.setString(1, query);
+            ps.setString(2, processedQuery);
+            ps.setString(3, query);
+            ps.setString(4, processedQuery);
+            ps.setString(5, query);
+            ps.setInt(6, offSet);
+            ps.setInt(7, maxSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new StationSearchResult(
+                            rs.getString(3),
+                            rs.getString(1),
+                            rs.getString(2)
+                    ));
+                }
+            }
+        }
+        return results;
+    }
+
+    public List<String> findAssociatedTiplocs(String tiploc) throws SQLException {
+        ArrayList<String> tiplocs = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT group_member from v_auto_tiploc_group " +
+                                "where given_code = ? and group_member <> ? " +
+                                "order by group_member"
+                )
+        ) {
+            ps.setString(1, tiploc);
+            ps.setString(2, tiploc);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(rs.getString(1));
+                }
+            }
+        }
+        return tiplocs;
     }
 
 }

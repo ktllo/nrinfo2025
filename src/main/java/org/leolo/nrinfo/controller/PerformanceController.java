@@ -47,4 +47,10 @@ public class PerformanceController {
         ));
     }
 
+    @RequestMapping("summary")
+    public ResponseEntity getNationalPerformaceSummary() {
+        log.info("getting national performance summary");
+        return null;
+    }
+
 }

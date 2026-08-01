@@ -1,0 +1,27 @@
+
+\usepackage{mdframed}
+\usepackage{xcolor}
+
+\newcommand{\texenginefull}{%
+    \ifPDFTeX
+    pdf\TeX~\the\pdftexversion.\pdftexrevision
+    \fi
+    \ifXeTeX
+    \XeTeX~\the\XeTeXversion
+    \fi
+    \ifLuaTeX
+    \LuaTeX~\the\luatexversion
+    \fi
+}
+
+\newmdenv[
+    linecolor=red,
+    innertopmargin=1em,
+    innerbottommargin=1em,
+    topline=false,
+    bottomline=false,
+    rightline=false,
+    linewidth=3pt
+]{infobox}
+
+\newcommand{\step}[1]{\textbf{Step #1:}\quad}

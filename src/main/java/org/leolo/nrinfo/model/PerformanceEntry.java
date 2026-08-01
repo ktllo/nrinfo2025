@@ -26,5 +26,6 @@ public class PerformanceEntry {
     RAG rollingRagValue;
     Trend trend;
     int timeBand;
+    int threshold;
     Collection<PerformanceEntry> subentry = new ArrayList<>();
 }

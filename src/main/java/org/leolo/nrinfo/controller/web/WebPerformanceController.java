@@ -34,6 +34,7 @@ public class WebPerformanceController {
         }
         PerformanceData pd = realTimePerformanceService.getNationalPerformanceData(snapshot);
         model.addAttribute("type", "national");
+        model.addAttribute("code", "nat");
         model.addAttribute("title", "Real time performance");
         model.addAttribute("main_subtitle", "National Summary");
         model.addAttribute("data", pd);
@@ -58,6 +59,7 @@ public class WebPerformanceController {
             return "error_";
         }
         model.addAttribute("type", "operator");
+        model.addAttribute("code", opc);
         model.addAttribute("message","Not implemented yet");
         model.addAttribute("title", "Real time performance for "+pe.getName());
         model.addAttribute("main_subtitle", "Summary for "+pe.getName());
