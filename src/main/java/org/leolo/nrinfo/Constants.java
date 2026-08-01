@@ -33,7 +33,6 @@ public class Constants {
                 * Delay in exceed of 2 hours are considered as cancelled
                 * Data only includes trains departs after 02:00 today
                 * 90% on time is bad
-                * Snapshot time is Unix timestamp
                 """;
     }
 }

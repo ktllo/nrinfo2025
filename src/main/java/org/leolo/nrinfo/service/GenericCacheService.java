@@ -60,7 +60,7 @@ public class GenericCacheService {
         }
     }
 
-    @Scheduled(fixedRate = 60)
+    @Scheduled(fixedRate = 60_000)
     public void removeExpiredEntry() {
         synchronized (lock) {
             log.info("removing expired entry");
