@@ -39,4 +39,11 @@ public class ResponseUtil {
         return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status","error","message",error,"details",details));
     }
 
+    public static ResponseEntity<Map<String, String>> buildBadRequestResponse() {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status","error","message","Bad request"));
+    }
+    public static ResponseEntity<Map<String, String>> buildBadRequestResponse(String message) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status","error","message",message));
+    }
+
 }

@@ -14,10 +14,11 @@
             $("#aisummary_disp").text("Generating. This may take a few moments.");
             $.ajax({
                 type: "GET",
-                url: "/ai/performance/summary/"+operatorId,
+                url: "/api/performance/summary/"+operatorId,
                 success: function (data) {
-                    var dispMsg = data.result;
+                    var dispMsg = data.message;
                     $("#aisummary_disp").html(dispMsg);
+                    $("#aisummary_footer").text(`Generated on ${data.generated}, took ${data.time_taken} ms. Token used: ${data.token_used}`);
                 }
             });
         }
@@ -100,10 +101,11 @@
     <div class="subtitle" id="subt_aisummary" onclick="toggle_display('aisummary')">
         <span id="hint_aisummary" style="margin-left: 1em;margin-right: 1em">-</span><span>AI Summary</span>
     </div>
-    <div class="container" id="cont_aisummary" style="padding-left: 1em;">
+    <div class="container" id="cont_aisummary" style="padding-left: 1em; box-sizing: border-box;">
         <button id="butgen" onclick="dispAiSummary()">Generate</button>
         <div id="aisummary_disp"></div>
         <div id="aisummary_detail"></div>
+        <div id="aisummary_footer" style="font-size: small"></div>
     </div>
 </div>
 <div th:if="${data.getSectors().size() > 0}">

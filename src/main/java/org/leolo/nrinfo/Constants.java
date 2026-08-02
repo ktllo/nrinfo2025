@@ -17,6 +17,11 @@ public class Constants {
         public static final String GENERIC_POPUP_MESSAGE = "generic_popup_message";
     }
 
+    public static class CacheKey {
+        public static final String NATIONAL_SUMMARY = "perfsummary.national";
+        public static final String OPERTATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
+    }
+
     public static class AIPrompt {
         public static final String SYSTEM_PERFORMANCE_SUMMARY = """
                 Generate a brief summary of the performance of the following train operators
@@ -26,6 +31,7 @@ public class Constants {
                 * Do not quote exact numbers, you may quite percentage
                 * Do not ask further questions
                 * Always give short comments
+                * Return the data in Markdown format
                 
                 ## Background info
                 * Data are based on the arrival time at final destination
