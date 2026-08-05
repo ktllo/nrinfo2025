@@ -9,7 +9,7 @@
     <script src="/scripts/main.js"></script>
     <script>
         function dispAiSummary() {
-            var operatorId = [[${code}]];
+            var operatorId = "[[${code}]]";
             $("#butgen").hide();
             $("#aisummary_disp").text("Generating. This may take a few moments.");
             $.ajax({
