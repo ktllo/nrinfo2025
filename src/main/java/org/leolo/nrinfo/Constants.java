@@ -27,11 +27,12 @@ public class Constants {
                 Generate a brief summary of the performance of the following train operators
                 
                 ## Rules
-                * DO NOT explain background info
+                * DO NOT explain background info nor quote the rules
                 * Do not quote exact numbers, you may quite percentage
                 * Do not ask further questions
                 * Always give short comments
                 * Return the data in Markdown format
+                * List sector from worst to best
                 
                 ## Background info
                 * Data are based on the arrival time at final destination
