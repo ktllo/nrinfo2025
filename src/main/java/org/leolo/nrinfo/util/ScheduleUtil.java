@@ -18,7 +18,7 @@ public class ScheduleUtil {
     }
 
     public static Time parseAllowance(String time) {
-        if (time == null || time.isEmpty()) {
+        if (time == null || time.isBlank()) {
             return null;
         }
         if (time.length() > 2) {

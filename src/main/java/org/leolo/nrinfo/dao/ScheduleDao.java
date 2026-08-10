@@ -169,7 +169,7 @@ public class ScheduleDao extends BaseDao {
             setString(psSch, 11, schedule.getOperator());
             setString(psSch, 12, schedule.getRetailHeadcode());
             setString(psSch, 13, schedule.getTrainServiceCode());
-            if (schedule.getPortionId().length() > 1) {
+            if (schedule.getPortionId()!= null && schedule.getPortionId().length() > 1) {
                 psSch.setNull(14, Types.CHAR);
             } else {
                 setString(psSch, 14, schedule.getPortionId());

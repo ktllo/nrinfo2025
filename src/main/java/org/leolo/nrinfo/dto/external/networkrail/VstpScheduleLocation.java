@@ -24,6 +24,7 @@ public class VstpScheduleLocation {
     @JsonProperty("CIF_performance_allowance") private String performanceAllowance;
     @JsonProperty("CIF_pathing_allowance") private String pathingAllowance;
     @JsonProperty("CIF_line") private String line;
+    @JsonProperty("CIF_path") private String path;
     @JsonProperty("CIF_engineering_allowance") private String engineeringAllowance;
     @JsonProperty("CIF_activity") private String activity;
 

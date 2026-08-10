@@ -4,7 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.leolo.nrinfo.dao.StompFailedMessageDao;
 import org.leolo.nrinfo.dto.external.networkrail.RealTimePerformance;
-import org.leolo.nrinfo.dto.external.networkrail.Schedule;
+import org.leolo.nrinfo.dto.external.networkrail.VstpMessage;
+import org.leolo.nrinfo.model.Schedule;
 import org.leolo.nrinfo.service.ScheduleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +41,11 @@ public class VstpScheduleMessageConsumer extends  MessageConsumer{
             if ("VSTPCIFMsgV1".equals(messageType)) {
                 log.info("VSTPCIFMsgV1 received");
             }
-            stompFailedMessageDao.insertFailedMessage(
-                    this.getClass(),
-                    message,
-                    new Exception("Testing data collection")
-            );
+            VstpMessage vstp = mapper.convertValue(node.get("VSTPCIFMsgV1"), VstpMessage.class);
+            Schedule schedule = vstp.getSchedule().toModel();
+            log.debug("Successfully parsed VSTPCIFMsgV1, UID:{}", schedule.getTrainUid());
+            scheduleService.insertSchedule(schedule);
+            log.info("Inserted VSTP schedule {} for {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
         } catch (Exception e) {
             stompFailedMessageDao.insertFailedMessage(
                     this.getClass(),
@@ -61,7 +62,7 @@ public class VstpScheduleMessageConsumer extends  MessageConsumer{
                 try {
                     processMessage(messageQueue.take());
                 } catch (Exception e) {
-                    log.error(e.getMessage(), e);
+                    log.error("Error when processing message - {}", e.getMessage(), e);
                 }
             }
         }

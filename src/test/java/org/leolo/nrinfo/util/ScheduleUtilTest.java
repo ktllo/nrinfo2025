@@ -46,8 +46,8 @@ public class ScheduleUtilTest {
     @Test void testParseAllowanceError() {
         assertNull(ScheduleUtil.parseAllowance(""));
         assertNull(ScheduleUtil.parseAllowance(null));
-        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.parseAllowance("  "));
-        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.parseAllowance("   "));
+        assertNull(ScheduleUtil.parseAllowance("  "));
+        assertNull(ScheduleUtil.parseAllowance("   "));
     }
 
 }

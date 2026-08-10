@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.leolo.nrinfo.model.Schedule;
+import org.leolo.nrinfo.model.ScheduleDetail;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -44,6 +45,7 @@ public class VstpScheduleMessageTest {
         assertNotEquals(0, vstp1.length());
     }
 
+    //Today's target
     @Test
     public void parseVstp() throws IOException {
         JsonNode node = mapper.readTree(vstp1);
@@ -51,6 +53,13 @@ public class VstpScheduleMessageTest {
         Schedule schedule = vstp.getSchedule().toModel();
         assertNotNull(vstp);
         assertEquals("73341", vstp.getSchedule().getTrainUid());
-        assertEquals(vstp.getSchedule().getScheduleStartDate(), vstp.getSchedule().getScheduleEndDate());
+        assertEquals(vstp.getSchedule().getScheduleStartDate(), schedule.getStartDate());
+        assertEquals(vstp.getSchedule().getScheduleEndDate(), schedule.getEndDate());
+        assertEquals("5Z01", schedule.getSignalHeadcode());
+        assertEquals("EM", schedule.getOperator());
+        assertEquals(11, schedule.getDetailList().size());
+        //Check the location and time
+        ScheduleDetail sd = schedule.getDetailList().get(0);
+        assertEquals("LINCLNC", sd.getLocation());
     }
 }

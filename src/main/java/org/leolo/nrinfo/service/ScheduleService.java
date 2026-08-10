@@ -98,4 +98,7 @@ public class ScheduleService {
         }
     }
 
+    public void insertSchedule(org.leolo.nrinfo.model.Schedule schedule) throws SQLException {
+        scheduleDao.insertSchedule(schedule);
+    }
 }
