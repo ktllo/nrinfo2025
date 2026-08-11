@@ -1,17 +1,10 @@
 package org.leolo.nrinfo.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.Getter;
-import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dto.response.PerformanceData;
 import org.leolo.nrinfo.exception.ResourceNotFoundException;
-import org.leolo.nrinfo.model.PerformanceEntry;
+import org.leolo.nrinfo.model.PendingData;
 import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
 import org.leolo.nrinfo.model.ai.CompletionResult;
-import org.leolo.nrinfo.model.ai.Prompt;
-import org.leolo.nrinfo.model.ai.SystemPrompt;
-import org.leolo.nrinfo.model.ai.UserPrompt;
 import org.leolo.nrinfo.service.AIGenerationService;
 import org.leolo.nrinfo.service.GenericCacheService;
 import org.leolo.nrinfo.service.PermissionService;
@@ -25,13 +18,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.*;
 
 import static org.leolo.nrinfo.Constants.CacheKey.NATIONAL_SUMMARY;
-import static org.leolo.nrinfo.Constants.CacheKey.OPERTATOR_SUMMARY_TEMPLATE;
+import static org.leolo.nrinfo.Constants.CacheKey.OPERATOR_SUMMARY_TEMPLATE;
 
 @RestController
 
@@ -48,6 +40,8 @@ public class PerformanceController {
     private AIGenerationService aiGenerationService;
     @Autowired
     private GenericCacheService genericCacheService;
+
+    private final Object LOCK = new Object();
 
 
 
@@ -110,29 +104,42 @@ public class PerformanceController {
         if (id == null || id.isEmpty()) {
             return ResponseUtil.buildBadRequestResponse();
         }
-        final String CACHE_KEY = String.format(OPERTATOR_SUMMARY_TEMPLATE, id);
+        RealTimePerformanceSnapshot snapshot = realTimePerformanceService.getSnapshot();
+        if (snapshot == null) {
+            log.info("No snapshot available!");
+            return ResponseEntity.ok(Map.of(
+                    "result", "failed",
+                    "message", "No recent performance data received yet"
+            ));
+        }
+        final String CACHE_KEY = String.format(OPERATOR_SUMMARY_TEMPLATE, id);
         CompletionResult completionResult = null;
-        if (genericCacheService.hasEntry(CACHE_KEY)) {
-            Object obj = genericCacheService.getEntry(CACHE_KEY);
-            if (obj instanceof CompletionResult) {
-                completionResult = (CompletionResult) obj;
+        PendingData<?> pendingData = null;
+        synchronized (LOCK) {
+            if (!genericCacheService.hasEntry(CACHE_KEY)) {
+                pendingData = new PendingData<>();
+                genericCacheService.addToCache(CACHE_KEY, pendingData, 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+                try {
+                    realTimePerformanceService.getOperatorSummary(snapshot, id, CACHE_KEY);
+                } catch (ResourceNotFoundException e) {
+                    return ResponseUtil.buildNotFoundResponse();
+                }
+            } else {
+                Object pd = genericCacheService.getEntry(CACHE_KEY);
+                if (pd instanceof PendingData) {
+                    pendingData = (PendingData<?>) genericCacheService.getEntry(CACHE_KEY);
+                } else {
+                    throw new RuntimeException("Type mismatch from Generic Cache!");
+                }
             }
         }
-        if (completionResult == null) {
-            RealTimePerformanceSnapshot snapshot = realTimePerformanceService.getSnapshot();
-            if (snapshot == null) {
-                log.info("No snapshot available!");
-                return ResponseEntity.ok(Map.of(
-                        "result", "failed",
-                        "message", "No recent performance data received yet"
-                ));
-            }
-            try {
-                completionResult = realTimePerformanceService.getOperatorSummary(snapshot, id, CACHE_KEY);
-            } catch (ResourceNotFoundException e) {
-                return ResponseUtil.buildNotFoundResponse();
-            }
+        Object pedingDataResult = pendingData.getData();
+        if (pedingDataResult instanceof CompletionResult) {
+            completionResult = (CompletionResult) pendingData.getData();
+        } else {
+            throw new RuntimeException("Type mismatch from PendingData in Generic Cache!");
         }
+
         String resultString = completionResult.getChoices()!=null?completionResult.getChoices().getFirst() : "Unable to create a brief summary";
         return ResponseEntity.ok(Map.of(
                 "message", MarkdownUtil.markdownToHtml(resultString),

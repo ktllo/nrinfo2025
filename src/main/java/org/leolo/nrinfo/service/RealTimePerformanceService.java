@@ -16,6 +16,7 @@ import org.leolo.nrinfo.dto.response.PerformanceMetric;
 import org.leolo.nrinfo.enums.RAG;
 import org.leolo.nrinfo.enums.Trend;
 import org.leolo.nrinfo.exception.ResourceNotFoundException;
+import org.leolo.nrinfo.model.PendingData;
 import org.leolo.nrinfo.model.PerformanceEntry;
 import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
 import org.leolo.nrinfo.model.ai.CompletionResult;
@@ -318,7 +319,12 @@ public class RealTimePerformanceService {
                 new UserPrompt(userPrompt)
         );
         CompletionResult completionResult = aiGenerationService.doCompletion(prompts, 5000);
-        genericCacheService.addToCache(CACHE_KEY, completionResult, 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+        if (genericCacheService.hasEntry(CACHE_KEY)) {
+            PendingData<CompletionResult> pendingData = (PendingData<CompletionResult>) genericCacheService.getEntry(CACHE_KEY);
+            pendingData.setData(completionResult);
+        } else {
+            genericCacheService.addToCache(CACHE_KEY, new PendingData<CompletionResult>(completionResult), 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+        }
         return completionResult;
     }
 
