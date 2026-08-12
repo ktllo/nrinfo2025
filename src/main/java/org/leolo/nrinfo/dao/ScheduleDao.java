@@ -357,14 +357,13 @@ public class ScheduleDao extends BaseDao {
                 // Delete details
                 PreparedStatement psDetail = connection.prepareStatement(
                         """
-                            DELETE FROM schedule_details sd
-                                where exists(
-                                        SELECT 1
+                            DELETE FROM schedule_details
+                                where schedule_uuid in(
+                                        SELECT schedule_uuid
                                             FROM schedule s
                                             WHERE
                                                 s.end_date < ?
                                                 and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = s.schedule_uuid)
-                                                and s.schedule_uuid = sd.schedule_uuid
                                 )
                             """
                 );
