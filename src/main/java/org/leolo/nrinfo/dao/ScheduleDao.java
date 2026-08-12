@@ -349,28 +349,33 @@ public class ScheduleDao extends BaseDao {
         try (
                 Connection connection = ds.getConnection();
                 // Delete association first
-                PreparedStatement psAssoc = connection.prepareStatement(
-                        "DELETE FROM schedule_association " +
-                                "where " +
-                                "   end_date < ? "
+                PreparedStatement psAssoc = connection.prepareStatement("""
+                   DELETE FROM schedule_association
+                       WHERE end_date < ?
+                   """
                 );
                 // Delete details
                 PreparedStatement psDetail = connection.prepareStatement(
-                        "DELETE FROM schedule_details " +
-                                "where exists(" +
-                                "SELECT 1 " +
-                                "FROM schedule s " +
-                                "WHERE" +
-                                "   s.end_date < ? " +
-                                "   and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = s.schedule_uuid)" +
-                                ")"
+                        """
+                            DELETE FROM schedule_details sd
+                                where exists(
+                                        SELECT 1
+                                            FROM schedule s
+                                            WHERE
+                                                s.end_date < ?
+                                                and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = s.schedule_uuid)
+                                                and s.schedule_uuid = sd.schedule_uuid
+                                )
+                            """
                 );
                 // Finally delete the main record
                 PreparedStatement psSchedule = connection.prepareStatement(
-                        "DELETE FROM schedule " +
-                                "WHERE " +
-                                "   end_date < ? " +
-                                "   and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = schedule.schedule_uuid)"
+                        """
+                            DELETE FROM schedule
+                                WHERE
+                                   end_date < ?
+                                   and not exists (SELECT 1 FROM stared_schedule ss WHERE ss.schedule_id = schedule.schedule_uuid)
+                            """
                 )
         ) {
             connection.setAutoCommit(false);
@@ -380,7 +385,8 @@ public class ScheduleDao extends BaseDao {
             int assoc = psAssoc.executeUpdate();
             int detail = psDetail.executeUpdate();
             int schedule = psSchedule.executeUpdate();
-            connection.commit();
+//            connection.commit();
+            connection.rollback();
             log.info("Deleted: {} Association, {} Schedule, {} detail record, {} in total", assoc, schedule, detail, assoc + schedule + detail);
         }
     }
