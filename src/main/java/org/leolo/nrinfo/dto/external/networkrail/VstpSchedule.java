@@ -53,7 +53,8 @@ public class VstpSchedule {
         schedule.setDaysRun(scheduleDaysRuns);
         schedule.setStpIndicator(stpIndicator);
         if (this.scheduleSegment == null || this.scheduleSegment.isEmpty()) {
-            throw new IllegalArgumentException("Schedule segment is null or empty");
+            log.debug("scheduleSegment is null or empty, this is probably a delete transaction");
+            return schedule;
         }
         VstpScheduleSegment scheduleSegment = this.scheduleSegment.getFirst();
         schedule.setSignalHeadcode(scheduleSegment.getSignallingId());

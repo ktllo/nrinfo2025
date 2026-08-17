@@ -257,6 +257,29 @@ public class ScheduleDao extends BaseDao {
         return result;
     }
 
+    public boolean deleteSchedule(String trainUID, java.util.Date startDate, java.util.Date endDate) throws SQLException {
+        if (trainUID == null || startDate == null || endDate == null) {
+            return false;
+        }
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            DELETE FROM schedule
+                                   WHERE
+                                       train_uid = ?
+                                        AND start_date = ?
+                                        AND end_date = ?
+                            """
+                )
+        ) {
+            ps.setString(1, trainUID);
+            setDate(ps, 2, startDate);
+            setDate(ps, 3, endDate);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
     public Collection<String> getTrainUIDByDate(Instant date) throws SQLException {
         try (
                 Connection connection = ds.getConnection();

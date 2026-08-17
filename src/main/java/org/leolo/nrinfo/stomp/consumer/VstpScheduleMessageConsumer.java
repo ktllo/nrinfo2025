@@ -42,20 +42,17 @@ public class VstpScheduleMessageConsumer extends  MessageConsumer{
                 log.info("VSTPCIFMsgV1 received");
             }
             VstpMessage vstp = mapper.convertValue(node.get("VSTPCIFMsgV1"), VstpMessage.class);
+            String transactionType = vstp.getSchedule().getTransactionType();
             Schedule schedule = vstp.getSchedule().toModel();
             log.debug("Successfully parsed VSTPCIFMsgV1, UID:{}", schedule.getTrainUid());
-            scheduleService.insertSchedule(schedule);
-            log.info("Inserted VSTP schedule {} for {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            if ("Delete".equalsIgnoreCase(transactionType)) {
+                scheduleService.deleteSchedule(schedule);
+            } else {
+                scheduleService.insertSchedule(schedule);
+                log.info("Inserted VSTP schedule {} for {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            }
             //Update the cache
             scheduleService.forceRebuildCache(schedule.getTrainUid(), schedule.getStartDate());
-            if (schedule.getOperator()==null) {
-                log.warn("Operator is null for {}", schedule.getTrainUid());
-//                stompFailedMessageDao.insertFailedMessage(
-//                        this.getClass(),
-//                        message,
-//                        new RuntimeException("Operator is null for " + schedule.getTrainUid())
-//                );
-            }
         } catch (Exception e) {
             stompFailedMessageDao.insertFailedMessage(
                     this.getClass(),

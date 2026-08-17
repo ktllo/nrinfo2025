@@ -108,6 +108,19 @@ public class ScheduleService {
         scheduleDao.insertSchedule(schedule);
     }
 
+    public void deleteSchedule(org.leolo.nrinfo.model.Schedule schedule) {
+        try {
+            boolean operationResult = scheduleDao.deleteSchedule(schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            if (!operationResult) {
+                log.warn("Unable to delete schedule {}, applicable from {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            } else {
+                log.info("Deleted Schedule {}, applicable from {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            }
+        } catch (SQLException e) {
+            log.warn("Unable to delete schedule {}, applicable from {} to {} due to SQLException. This schedule may be stated.", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+        }
+    }
+
     /**
      * Find the applicable schedule UUID for the given train and date
      *
