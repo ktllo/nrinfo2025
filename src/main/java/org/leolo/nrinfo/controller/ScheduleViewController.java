@@ -36,16 +36,34 @@ public class ScheduleViewController {
     public ResponseEntity<?> getScheduleSummaryByDate(
             @PathVariable("uid") String uid,
             @PathVariable("date") String date
-    ) throws SQLException, ParseException {
+    ) {
         log.info("Schedule for {} on {} is requested", uid, date);
         //Parse the date
-        Date parsedDate = new SimpleDateFormat("yyyy-MM-dd").parse(date);
-        UUID scheduleUUID = scheduleService.getScheduleUUID(uid, parsedDate);
+        Date parsedDate = null;
+        try {
+            parsedDate = new SimpleDateFormat("yyyy-MM-dd").parse(date);
+        } catch (ParseException e) {
+            //Bad input
+            return ResponseUtil.buildBadRequestResponse("Invalid date format");
+        }
+        UUID scheduleUUID = null;
+        try {
+            scheduleUUID = scheduleService.getScheduleUUID(uid, parsedDate);
+        } catch (SQLException e) {
+            log.error("Error while getting schedule UUID - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Database error", "There are issue retriving data. Try again later.");
+        }
         if (scheduleUUID == null) {
             //No schedule is available
             return ResponseUtil.buildNotFoundResponse();
         }
-        Schedule schedule = scheduleService.getScheduleByUUID(scheduleUUID);
+        Schedule schedule = null;
+        try {
+            schedule = scheduleService.getScheduleByUUID(scheduleUUID);
+        } catch (SQLException e) {
+            log.error("Error while getting schedule UUID - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Database error", "There are issue retriving data. Try again later.");
+        }
         if (Objects.equals(schedule.getStpIndicator(), "C")) {
             //The train has been cancelled
             return ResponseUtil.buildNotFoundResponse("Train cancelled by overlay");
@@ -57,17 +75,25 @@ public class ScheduleViewController {
         }
         Map<String, Tiploc> locations = tiplocService.getTiplocsByTiplocCodes(tiplocs);
         trainSchedule.setTrainUid(schedule.getTrainUid());
-        if (schedule.getOperator()==null) {
-            //Try to get it from base schedule
-            Schedule baseSchedule = scheduleService.getScheduleByUUID(scheduleService.getBaseScheduleUUID(uid, parsedDate));
-            if (baseSchedule == null || baseSchedule.getOperator() == null) {
-                trainSchedule.setTrainOperator("Unknown");
+
+        try {
+            if (schedule.getOperator()==null) {
+                //Try to get it from base schedule
+                Schedule baseSchedule = null;
+                    baseSchedule = scheduleService.getScheduleByUUID(scheduleService.getBaseScheduleUUID(uid, parsedDate));
+
+                if (baseSchedule == null || baseSchedule.getOperator() == null) {
+                    trainSchedule.setTrainOperator("Unknown");
+                } else {
+                    log.debug("No TOC info for applicable schedule but found operator {} in base schedule", baseSchedule.getOperator());
+                    trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(baseSchedule.getOperator()));
+                }
             } else {
-                log.debug("No TOC info for applicable schedule but found operator {} in base schedule", baseSchedule.getOperator());
-                trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(baseSchedule.getOperator()));
+                trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(schedule.getOperator()));
             }
-        } else {
-            trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(schedule.getOperator()));
+        } catch (SQLException e) {
+            log.error("Error while getting schedule UUID - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Database error", "There are issue retriving data. Try again later.");
         }
         trainSchedule.setTrainType(TrainCategory.getTrainCategory(schedule.getTrainCategory()).getDisplayName());
         SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
