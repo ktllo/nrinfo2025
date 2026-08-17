@@ -29,7 +29,7 @@ public class ScheduleDao extends BaseDao {
                 train_uid = ?
                 and ? between start_date and end_date
                 and days_run LIKE get_date_mask(?)
-            order by stp_indicator
+            order by stp_indicator %s
             limit 1
             """;
     private Logger log = LoggerFactory.getLogger(ScheduleDao.class);
@@ -434,8 +434,24 @@ public class ScheduleDao extends BaseDao {
     public UUID findApplicableSchedule(String trainUID, java.util.Date date) throws SQLException {
         try (
                 Connection connection = ds.getConnection();
-                PreparedStatement ps = connection.prepareStatement(SQL_FIND_APPLICABLE_SCHEDULE);
-                ) {
+                PreparedStatement ps = connection.prepareStatement(SQL_FIND_APPLICABLE_SCHEDULE.formatted("ASC"));
+        ) {
+            ps.setString(1, trainUID);
+            ps.setDate(2, new java.sql.Date(date.getTime()));
+            ps.setDate(3, new java.sql.Date(date.getTime()));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return CommonUtil.bytesToUUID(rs.getBytes(1));
+                }
+            }
+        }
+        return null;
+    }
+    public UUID findBaseSchedule(String trainUID, java.util.Date date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(SQL_FIND_APPLICABLE_SCHEDULE.formatted("DESC"));
+        ) {
             ps.setString(1, trainUID);
             ps.setDate(2, new java.sql.Date(date.getTime()));
             ps.setDate(3, new java.sql.Date(date.getTime()));

@@ -32,7 +32,6 @@ public class ScheduleViewController {
     @Autowired
     private TiplocService tiplocService;
 
-    //TODO: Proper exception handling
     @GetMapping("/{uid}/{date}/summary")
     public ResponseEntity<?> getScheduleSummaryByDate(
             @PathVariable("uid") String uid,
@@ -57,10 +56,19 @@ public class ScheduleViewController {
             tiplocs.add(sd.getLocation());
         }
         Map<String, Tiploc> locations = tiplocService.getTiplocsByTiplocCodes(tiplocs);
-        log.debug("Locations: {}", locations);
         trainSchedule.setTrainUid(schedule.getTrainUid());
-        log.debug("ATOC Code {}", schedule.getOperator());
-        trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(schedule.getOperator()));
+        if (schedule.getOperator()==null) {
+            //Try to get it from base schedule
+            Schedule baseSchedule = scheduleService.getScheduleByUUID(scheduleService.getBaseScheduleUUID(uid, parsedDate));
+            if (baseSchedule == null || baseSchedule.getOperator() == null) {
+                trainSchedule.setTrainOperator("Unknown");
+            } else {
+                log.debug("No TOC info for applicable schedule but found operator {} in base schedule", baseSchedule.getOperator());
+                trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(baseSchedule.getOperator()));
+            }
+        } else {
+            trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(schedule.getOperator()));
+        }
         trainSchedule.setTrainType(TrainCategory.getTrainCategory(schedule.getTrainCategory()).getDisplayName());
         SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
         if (!tiplocs.isEmpty()) {

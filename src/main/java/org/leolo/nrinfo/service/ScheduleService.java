@@ -135,6 +135,11 @@ public class ScheduleService {
         return scheduleDao.findApplicableSchedule(trainUID, date);
     }
 
+    public UUID getBaseScheduleUUID(@NotNull String trainUID, @NotNull Date date) throws SQLException {
+        log.debug("Getting base schedule UUID for train UID {} for {}", trainUID, date);
+        return scheduleDao.findBaseSchedule(trainUID, date);
+    }
+
     public void forceRebuildCache(String trainUID, java.util.Date date) throws SQLException {
         scheduleDao.forceCacheRebuild(trainUID, date);
     }
