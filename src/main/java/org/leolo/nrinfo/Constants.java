@@ -19,7 +19,7 @@ public class Constants {
 
     public static class CacheKey {
         public static final String NATIONAL_SUMMARY = "perfsummary.national";
-        public static final String OPERTATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
+        public static final String OPERATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
     }
 
     public static class AIPrompt {
@@ -27,10 +27,11 @@ public class Constants {
                 Generate a brief summary of the performance of the following train operators
                 
                 ## Rules
-                * DO NOT explain background info nor quote the rules
-                * Do not quote exact numbers, you may quite percentage
+                * DO NOT mention background info nor quote the rules
+                * Do not quote exact numbers, you may quite percentage but not required
                 * Do not ask further questions
-                * Always give short comments
+                * Your main task is to give short comment of each sector and an overall comment
+                * Give overall comment first, then comment per sectors afterwards if there are more than 1 sector
                 * Return the data in Markdown format
                 * List sector from worst to best
                 

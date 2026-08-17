@@ -31,6 +31,9 @@ public class ResponseUtil {
     public static ResponseEntity<Map<String, String>> buildNotFoundResponse() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status","error","message","The requested resource does not exist"));
     }
+    public static ResponseEntity<Map<String, String>> buildNotFoundResponse(String additionalInfo) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status","error","message","The requested resource does not exist", "extra_info", additionalInfo));
+    }
     public static ResponseEntity<Map<String, String>> buildNotImplementedResponse() {
         return  ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("status","error","message","The requested resource is not implemented"));
     }

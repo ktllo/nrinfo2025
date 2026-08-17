@@ -15,10 +15,23 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.UUID;
 
 @Repository
 public class ScheduleDao extends BaseDao {
 
+    //Shared SQL
+    public static final String SQL_FIND_APPLICABLE_SCHEDULE = """
+            SELECT
+                schedule_uuid
+            FROM schedule s
+            WHERE
+                train_uid = ?
+                and ? between start_date and end_date
+                and days_run LIKE get_date_mask(?)
+            order by stp_indicator
+            limit 1
+            """;
     private Logger log = LoggerFactory.getLogger(ScheduleDao.class);
     @Autowired private DataSource ds;
 
@@ -97,9 +110,9 @@ public class ScheduleDao extends BaseDao {
                 ps.addBatch();
             }
             int [] executeResult = ps.executeBatch();
-            for (int i = 0; i < executeResult.length; i++) {
-                if (executeResult[i] > 0) {
-                    deleted+=executeResult[i];
+            for (int j : executeResult) {
+                if (j > 0) {
+                    deleted += j;
                 }
             }
         }
@@ -275,15 +288,18 @@ public class ScheduleDao extends BaseDao {
                                 "AND days_run LIKE get_date_mask(?)"
                 );
                 PreparedStatement psUpsert = connection.prepareStatement(
-                        "INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid) " +
-                                "SELECT train_uid, ?, schedule_uuid FROM schedule s " +
-                                "WHERE " +
-                                "train_uid = ? " +
-                                "and ? between start_date and end_date " +
-                                "and days_run LIKE get_date_mask(?)" +
-                                "order by stp_indicator " +
-                                "limit 1 "+
-                                "ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid"
+                        """
+                                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid)
+                                SELECT
+                                    train_uid, ?, schedule_uuid FROM schedule s
+                                WHERE
+                                    train_uid = ?
+                                    and ? between start_date and end_date
+                                    and days_run LIKE get_date_mask(?)
+                                order by stp_indicator
+                                limit 1
+                                ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid
+                                """
                 )
         ) {
             connection.setAutoCommit(false);
@@ -387,6 +403,139 @@ public class ScheduleDao extends BaseDao {
 //            connection.commit();
             connection.rollback();
             log.info("Deleted: {} Association, {} Schedule, {} detail record, {} in total", assoc, schedule, detail, assoc + schedule + detail);
+        }
+    }
+
+    public UUID checkScheduleCache(String trainUID, java.util.Date date) throws SQLException {
+        try(
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            SELECT schedule_uuid
+                            FROM schedule_map
+                            WHERE
+                                train_uid = ?
+                                AND schedule_date = ?
+                            """
+                )
+                ) {
+            trainUID = trainUID.strip().toUpperCase();
+            ps.setString(1, trainUID);
+            ps.setDate(2, new java.sql.Date(date.getTime()));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return CommonUtil.bytesToUUID(rs.getBytes(1));
+                }
+            }
+        }
+        return null;
+    }
+
+    public UUID findApplicableSchedule(String trainUID, java.util.Date date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(SQL_FIND_APPLICABLE_SCHEDULE);
+                ) {
+            ps.setString(1, trainUID);
+            ps.setDate(2, new java.sql.Date(date.getTime()));
+            ps.setDate(3, new java.sql.Date(date.getTime()));
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return CommonUtil.bytesToUUID(rs.getBytes(1));
+                }
+            }
+        }
+        return null;
+    }
+
+    public void forceCacheRebuild(String trainUID, java.util.Date date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement("""
+                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid)
+                SELECT
+                    train_uid, ?, schedule_uuid FROM schedule s
+                WHERE
+                    train_uid = ?
+                    and ? between start_date and end_date
+                    and days_run LIKE get_date_mask(?)
+                order by stp_indicator
+                limit 1
+                ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid
+                """)
+        ){
+            ps.setDate(1, new java.sql.Date(date.getTime()));
+            ps.setString(2, trainUID);
+            ps.setDate(3, new java.sql.Date(date.getTime()));
+            ps.setDate(4, new java.sql.Date(date.getTime()));
+            ps.executeUpdate();
+        }
+    }
+
+    public Schedule getSchedule(UUID uuid) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement psSch = connection.prepareStatement(
+                        "SELECT * FROM schedule WHERE schedule_uuid = ?"
+                );
+                PreparedStatement psDetail = connection.prepareStatement(
+                        "SELECT * FROM schedule_details WHERE schedule_uuid = ? ORDER BY entry_seq "
+                )
+        ) {
+            Schedule schedule = new Schedule();
+            psSch.setBytes(1, CommonUtil.uuidToBytes(uuid));
+            try (ResultSet rs = psSch.executeQuery()) {
+                if (rs.next()) {
+                    schedule.setScheduleUuid(CommonUtil.bytesToUUID(rs.getBytes("schedule_uuid")));
+                    schedule.setTrainUid(rs.getString("train_uid"));
+                    schedule.setStartDate(rs.getDate("start_date"));
+                    schedule.setEndDate(rs.getDate("end_date"));
+                    schedule.setDaysRun(rs.getString("days_run"));
+                    schedule.setStpIndicator(rs.getString("stp_indicator"));
+                    schedule.setTrainStatus(rs.getString("train_status"));
+                    schedule.setBankHolidayRuns(rs.getString("bank_holiday_runs"));
+                    schedule.setTrainCategory(rs.getString("train_category"));
+                    schedule.setSignalHeadcode(rs.getString("signal_headcode"));
+                    schedule.setOperator(rs.getString("operator"));
+                    schedule.setRetailHeadcode(rs.getString("retail_headcode"));
+                    schedule.setTrainServiceCode(rs.getString("train_service_code"));
+                    schedule.setPortionId(rs.getString("portion_id"));
+                    schedule.setPowerType(rs.getString("power_type"));
+                    schedule.setTimingLoad(rs.getString("timing_load"));
+                    schedule.setPlannedSpeed(rs.getInt("planned_speed"));
+                    schedule.setOperatingCharacteristics(rs.getString("operating_characteristics"));
+                    schedule.setFirstClass(rs.getString("has_first_class"));
+                    schedule.setSleeper(rs.getString("sleeper"));
+                    schedule.setReservations(rs.getString("reservations"));
+                    schedule.setCatering(rs.getString("catering"));
+                } else {
+                    log.debug("No schedule found for uuid: {}", uuid);
+                    return null;
+                }
+            }
+            //TODO: Go into the details
+            psDetail.setBytes(1, CommonUtil.uuidToBytes(uuid));
+            try (ResultSet rs = psDetail.executeQuery()) {
+                while (rs.next()) {
+                    ScheduleDetail scheduleDetail = new ScheduleDetail();
+                    scheduleDetail.setLocation(rs.getString("location"));
+                    scheduleDetail.setLocationInstance(rs.getInt("location_instance"));
+                    scheduleDetail.setArrivalTime(rs.getTime("arrival_time"));
+                    scheduleDetail.setDepartureTime(rs.getTime("departure_time"));
+                    scheduleDetail.setPassTime(rs.getTime("pass_time"));
+                    scheduleDetail.setPublicArrivalTime(rs.getTime("public_arrival_time"));
+                    scheduleDetail.setPublicDepartureTime(rs.getTime("public_departure_time"));
+                    scheduleDetail.setPlatform(rs.getString("platform"));
+                    scheduleDetail.setLine(rs.getString("line"));
+                    scheduleDetail.setPath(rs.getString("path"));
+                    scheduleDetail.setEngineeringAllowance(rs.getTime("engineering_allowance"));
+                    scheduleDetail.setPathingAllowance(rs.getTime("pathing_allowance"));
+                    scheduleDetail.setPerformanceAllowance(rs.getTime("performance_allowance"));
+                    schedule.getDetailList().add(scheduleDetail);
+                }
+            }
+
+            return schedule;
         }
     }
 }

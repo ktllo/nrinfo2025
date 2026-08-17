@@ -46,6 +46,16 @@ public class VstpScheduleMessageConsumer extends  MessageConsumer{
             log.debug("Successfully parsed VSTPCIFMsgV1, UID:{}", schedule.getTrainUid());
             scheduleService.insertSchedule(schedule);
             log.info("Inserted VSTP schedule {} for {} to {}", schedule.getTrainUid(), schedule.getStartDate(), schedule.getEndDate());
+            //Update the cache
+            scheduleService.forceRebuildCache(schedule.getTrainUid(), schedule.getStartDate());
+            if (schedule.getOperator()==null) {
+                log.warn("Operator is null for {}", schedule.getTrainUid());
+//                stompFailedMessageDao.insertFailedMessage(
+//                        this.getClass(),
+//                        message,
+//                        new RuntimeException("Operator is null for " + schedule.getTrainUid())
+//                );
+            }
         } catch (Exception e) {
             stompFailedMessageDao.insertFailedMessage(
                     this.getClass(),
