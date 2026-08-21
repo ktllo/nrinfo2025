@@ -15,6 +15,7 @@ import java.sql.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 
 @Repository
@@ -552,7 +553,6 @@ public class ScheduleDao extends BaseDao {
                     return null;
                 }
             }
-            //TODO: Go into the details
             psDetail.setBytes(1, CommonUtil.uuidToBytes(uuid));
             try (ResultSet rs = psDetail.executeQuery()) {
                 while (rs.next()) {
@@ -576,5 +576,51 @@ public class ScheduleDao extends BaseDao {
 
             return schedule;
         }
+    }
+
+    public List<ScheduleAssociation> getScheduleAssociation(String trainUid, java.util.Date date) throws SQLException {
+        List<ScheduleAssociation> list = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement("""
+                    SELECT
+                        base_uid, assoc_uid, start_date, end_date, assoc_days,
+                        stp_indicator, assoc_date, assoc_location, base_suffix, assoc_suffix,
+                        assoc_category, assoc_type
+                    FROM
+                        schedule_association
+                    WHERE
+                        (
+                            base_uid = ?
+                            OR assoc_uid = ?
+                        )
+                        AND ? BETWEEN start_date AND end_date
+                        AND assoc_days LIKE get_date_mask(?)
+                    """)
+                ) {
+            ps.setString(1, trainUid);
+            ps.setString(2, trainUid);
+            setDate(ps, 3, date);
+            setDate(ps, 4, date);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    ScheduleAssociation scheduleAssociation = new ScheduleAssociation();
+                    scheduleAssociation.setBaseUid(rs.getString("base_uid"));
+                    scheduleAssociation.setAssocUid(rs.getString("assoc_uid"));
+                    scheduleAssociation.setStartDate(rs.getDate("start_date"));
+                    scheduleAssociation.setEndDate(rs.getDate("end_date"));
+                    scheduleAssociation.setAssocDays(rs.getString("assoc_days"));
+                    scheduleAssociation.setStpIndicator(rs.getString("stp_indicator"));
+                    scheduleAssociation.setAssocDate(rs.getInt("assoc_date"));
+                    scheduleAssociation.setAssocLocation(rs.getString("assoc_location"));
+                    scheduleAssociation.setBaseSuffix(rs.getString("base_suffix"));
+                    scheduleAssociation.setAssocSuffix(rs.getString("assoc_suffix"));
+                    scheduleAssociation.setAssocCategory(rs.getString("assoc_category"));
+                    scheduleAssociation.setAssocType(rs.getString("assoc_type"));
+                    list.add(scheduleAssociation);
+                }
+            }
+        }
+        return list;
     }
 }

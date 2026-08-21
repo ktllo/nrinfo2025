@@ -5,6 +5,7 @@ import org.leolo.nrinfo.dao.DatabaseOperationResult;
 import org.leolo.nrinfo.dao.ScheduleDao;
 import org.leolo.nrinfo.dao.TrainOperatorDao;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
+import org.leolo.nrinfo.enums.PowerType;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,10 +16,7 @@ import org.springframework.stereotype.Service;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class ScheduleService {
@@ -162,6 +160,154 @@ public class ScheduleService {
     }
 
     public String getTrainOperatorName(String atocCode) throws SQLException {
+        if (atocCode == null) {
+            return null;
+        }
+        if (atocCode.equalsIgnoreCase("ZZ")) {
+            //This is a special case, ZZ are known to be shared by many freight operators
+            return "Freight Service";
+        }
         return trainOperatorDao.getTrainOperatorName(atocCode);
+    }
+
+    public String getTimingLoad(String powerType, String timingLoad) {
+        PowerType pt = PowerType.fromCode(powerType);
+        if (timingLoad == null || pt == PowerType.UNKNOWN) {
+            //We do not have information to answer
+            return null;
+        }
+        if (pt == PowerType.DIESEL_ELECTRIC_MU || pt == PowerType.DIESEL_MECHANICAL_MU) {
+            switch (timingLoad) {
+                case "69":
+                    return "Class 172";
+                case "A":
+                    return "Class 141 to 144";
+                case "E":
+                    return "Class 158, 168, 170 or 175";
+                case "N":
+                    return "Class 165/0";
+                case "S":
+                    return "Class 150, 153, 155, or 156";
+                case "T":
+                    return "Class 165/1 or 166";
+                case "V":
+                    return "Class 220 or 221";
+                case "X":
+                    return "Class 159";
+                case "D1":
+                case "D2":
+                case "D3":
+                    return "DMU";
+                default:
+                    try {
+                        int clazz = Integer.parseInt(timingLoad);
+                        if (clazz <= 999 && clazz >= 0) {
+                            return "Class " + clazz;
+                        }
+                    } catch (NumberFormatException e) {
+                        //Given is not a class number, this is not an error and we do not have to do anything
+                    }
+            }
+        } else if (pt == PowerType.ELECTRIC_MU){
+            //EMUs
+            switch (timingLoad) {
+                case "AT":
+                    return "Accelerated Timings";
+                case "E":
+                    return "Class 458";
+                case "0":
+                    return "Class 380";
+                case "506":
+                    return "Class 350/1";
+                default:
+                    try {
+                        int clazz = Integer.parseInt(timingLoad);
+                        if (clazz <= 999 && clazz >= 0) {
+                            return "Class " + clazz;
+                        }
+                    } catch (NumberFormatException e) {
+                        //Given is not a class number, this is not an error and we do not have to do anything
+                    }
+            }
+        } else if (pt == PowerType.DIESEL || pt == PowerType.ELECTRIC || pt == PowerType.ELECTRO_DIESEL){
+            //Hauled train
+            try {
+                int load = Integer.parseInt(timingLoad);
+                if (load <= 9999 && load >= 0) {
+                    return load + " tonnes";
+                }
+            } catch (NumberFormatException e) {
+                //Given is not a class number, this is not an error and we do not have to do anything
+            }
+        }
+        //Returning null by default
+        return null;
+    }
+
+    public String getTimingLoad(org.leolo.nrinfo.model.Schedule schedule) {
+        return getTimingLoad(schedule.getPowerType(), schedule.getTimingLoad());
+    }
+
+    public List<ScheduleAssociation> getScheduleAssociation(String trainUID, java.util.Date date)  throws SQLException {
+        List<ScheduleAssociation> associations = scheduleDao.getScheduleAssociation(trainUID, date);
+        log.info("Initial search returned {} associations", associations.size());
+        associations.sort(Comparator.comparing(
+                ScheduleAssociation::getBaseUid, String.CASE_INSENSITIVE_ORDER
+        ).thenComparing(
+                ScheduleAssociation::getAssocUid, String.CASE_INSENSITIVE_ORDER
+        ).thenComparing(
+                ScheduleAssociation::getStpIndicator, String.CASE_INSENSITIVE_ORDER
+        ).thenComparing(
+                ScheduleAssociation::getAssocLocation
+        ).thenComparing(
+                ScheduleAssociation::getAssocType
+        ).thenComparing(
+                ScheduleAssociation::getStartDate
+        ).thenComparing(
+                ScheduleAssociation::getEndDate
+        ));
+        return associations;
+    }
+
+    public ScheduleAssociation getAssociation(List<ScheduleAssociation> list, String trainUid, String location) {
+        return getAssociation(list, trainUid, location, 1);
+    }
+
+    public ScheduleAssociation getAssociation(List<ScheduleAssociation> list, String trainUid, String location, int instance) {
+        if (trainUid == null || location == null) {
+            return null;
+        }
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        if (instance <= 0) {
+            instance = 1;
+        }
+        log.debug("Get association for {} {}-{}", trainUid, location, instance);
+        for (ScheduleAssociation sa : list) {
+            if (location.equalsIgnoreCase(sa.getAssocLocation())) {
+                if (trainUid.equalsIgnoreCase(sa.getBaseUid())){
+                    if (compareAssociationInstance(instance, sa.getBaseSuffix())) {
+                        return sa;
+                    }
+                } else {
+                    if (compareAssociationInstance(instance, sa.getAssocSuffix())) {
+                        return sa;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean compareAssociationInstance(int targetInstance, String dbInstance) {
+        int numericDbInstance;
+        if (dbInstance == null) {
+            numericDbInstance = 1;
+        } else {
+            numericDbInstance = Integer.parseInt(dbInstance);
+        }
+        return targetInstance == numericDbInstance;
+
     }
 }

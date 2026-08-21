@@ -50,4 +50,22 @@ public class ScheduleUtilTest {
         assertNull(ScheduleUtil.parseAllowance("   "));
     }
 
+    @Test void testFormatDaysRunsMasks(){
+        //Commonly seen
+        assertEquals("SSuX",ScheduleUtil.formatDaysRunsMasks("1111100"));
+        assertEquals("SuX",ScheduleUtil.formatDaysRunsMasks("1111110"));
+        assertEquals("SuO",ScheduleUtil.formatDaysRunsMasks("0000001"));
+        assertEquals("MO",ScheduleUtil.formatDaysRunsMasks("1000000"));
+
+        //Additional Case
+        assertEquals("MTuWO",ScheduleUtil.formatDaysRunsMasks("1110000"));
+        assertEquals("ThFSO",ScheduleUtil.formatDaysRunsMasks("0001110"));
+
+        //Error case
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.formatDaysRunsMasks(""));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.formatDaysRunsMasks(null));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.formatDaysRunsMasks("00000000"));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.formatDaysRunsMasks("000000"));
+    }
+
 }

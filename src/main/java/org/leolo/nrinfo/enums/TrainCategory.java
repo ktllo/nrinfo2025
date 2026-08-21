@@ -1,6 +1,4 @@
-package org.leolo.nrinfo.model;
-
-import lombok.Getter;
+package org.leolo.nrinfo.enums;
 
 public enum TrainCategory {
 
