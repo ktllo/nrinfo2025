@@ -41,6 +41,10 @@ public class TiplocService {
         return tiploc;
     }
 
+    public Collection<String> getGroupMembers(String tiplocCode) throws SQLException {
+        return tiplocDao.findAssociatedTiplocs(tiplocCode);
+    }
+
     public Map<String, Tiploc> getTiplocsByTiplocCodes(Collection<String> tiplocs) {
         HashMap<String, Tiploc> tiplocMap = new HashMap<>();
         for (String tiplocCode : tiplocs) {

@@ -1,8 +1,11 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.dto.request.ScheduleSearch;
+import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.model.Schedule;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
+import org.leolo.nrinfo.model.SearchParameter;
 import org.leolo.nrinfo.util.CommonUtil;
 import org.leolo.nrinfo.util.ScheduleUtil;
 import org.slf4j.Logger;
@@ -313,9 +316,9 @@ public class ScheduleDao extends BaseDao {
                 );
                 PreparedStatement psUpsert = connection.prepareStatement(
                         """
-                                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid)
+                                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid, updated_date)
                                 SELECT
-                                    train_uid, ?, schedule_uuid FROM schedule s
+                                    train_uid, ?, schedule_uuid, now() FROM schedule s
                                 WHERE
                                     train_uid = ?
                                     and ? between start_date and end_date
@@ -492,9 +495,9 @@ public class ScheduleDao extends BaseDao {
         try (
                 Connection connection = ds.getConnection();
                 PreparedStatement ps = connection.prepareStatement("""
-                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid)
+                INSERT INTO schedule_map (train_uid, schedule_date, schedule_uuid, updated_date)
                 SELECT
-                    train_uid, ?, schedule_uuid FROM schedule s
+                    train_uid, ?, schedule_uuid, NOW() FROM schedule s
                 WHERE
                     train_uid = ?
                     and ? between start_date and end_date
@@ -619,6 +622,140 @@ public class ScheduleDao extends BaseDao {
                     scheduleAssociation.setAssocType(rs.getString("assoc_type"));
                     list.add(scheduleAssociation);
                 }
+            }
+        }
+        return list;
+    }
+
+    public Instant getOldestCacheDate(java.util.Date date) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement pstmt = connection.prepareStatement(
+                        """
+                            SELECT MIN(updated_date)
+                            FROM schedule_map
+                            WHERE schedule_date = ?
+                            """
+                )
+        ){
+            setDate(pstmt, 1, date);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                //We can only get 1 row
+                if (rs.next()) {
+                    Timestamp oldestDate = rs.getTimestamp(1);
+                    return oldestDate == null ? null : oldestDate.toInstant();
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<UUID> searchTrainSchedule(ScheduleSearch scheduleSearch) throws SQLException {
+        List<UUID> list = new ArrayList<>();
+
+        List<SearchParameter> params = new ArrayList<>();
+        //Build the SQL
+        StringBuilder sbSql = new StringBuilder();
+        sbSql.append("select distinct s.schedule_uuid ");
+        sbSql.append("from schedule s ");
+        sbSql.append("join schedule_map sm on s.schedule_uuid = sm.schedule_uuid ");
+        if (scheduleSearch.getLocation() != null) {
+            sbSql.append("join schedule_details sd on s.schedule_uuid = sd.schedule_uuid ");
+            sbSql.append("join v_auto_tiploc_group vatg on sd.location = vatg.group_member ");
+        }
+        if (!scheduleSearch.isHideCancelledTrain()) {
+            sbSql.append("join schedule bs on s.train_uid = bs.train_uid and ? between bs.start_date and bs.end_date and " +
+                    "bs.days_run like get_date_mask(?) and bs.stp_indicator = 'P' ");
+            params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
+            params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
+        }
+
+        sbSql.append("where 1=1 ");
+        sbSql.append("and sm.schedule_date = ? ");
+        params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
+
+        if (scheduleSearch.getLocation() != null) {
+            sbSql.append("and vatg.given_code = ? ");
+            params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getLocation()));
+        }
+        if (scheduleSearch.getHeadcode() != null) {
+
+            if (!scheduleSearch.isHideCancelledTrain()) {
+                sbSql.append("and (s.signal_headcode = ? or bs.signal_headcode = ?) ");
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getHeadcode()));
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getHeadcode()));
+            } else {
+                sbSql.append("and s.signal_headcode = ?");
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getHeadcode()));
+            }
+        }
+        //Time
+        if (scheduleSearch.getLocation() != null) {
+            if (scheduleSearch.isPublicTimetableOnly()) {
+                sbSql.append("and COALESCE(sd.public_departure_time,  sd.public_arrival_time) BETWEEN ? AND ? ");
+                params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
+                params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+            } else {
+                if (scheduleSearch.isCallOnly()) {
+                    sbSql.append("and COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time) BETWEEN ? AND ? ");
+                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
+                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+                } else {
+                    sbSql.append("and COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time, sd.pass_time) BETWEEN ? AND ? ");
+                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
+                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+                }
+            }
+        }
+        //Unhide cancelled trains
+        if (!scheduleSearch.isHideCancelledTrain()) {
+            //TODO: figure out how to do this
+        }
+
+
+
+        //Sort
+        if (scheduleSearch.getLocation() != null) {
+            if (scheduleSearch.isPublicTimetableOnly()) {
+                sbSql.append("ORDER BY COALESCE(sd.public_departure_time,  sd.public_arrival_time) ");
+            } else {
+                if (scheduleSearch.isCallOnly()) {
+                    sbSql.append("ORDER BY COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time)");
+                } else {
+                    sbSql.append("ORDER BY COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time, sd.pass_time)");
+                }
+            }
+        } else {
+            sbSql.append("ORDER BY s.departure_time ");
+        }
+
+
+        if (scheduleSearch.getPageSize() != 0) {
+            sbSql.append("LIMIT ?");
+            params.add(new SearchParameter(Types.INTEGER, scheduleSearch.getPageSize()));
+        }
+
+
+
+        log.info("Generated SQL: {}", sbSql.toString());
+        for (int i=0;i<params.size();i++) {
+            log.info(" Param {}: {}", i+1, params.get(i).getValue());
+        }
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement pstmt = connection.prepareStatement(sbSql.toString())
+        ) {
+            for (int i=0;i<params.size();i++) {
+                setSearchParameter(pstmt, i+1, params.get(i));
+            }
+            try (ResultSet rs = pstmt.executeQuery()) {
+                int rowCount = 0;
+                while (rs.next()) {
+                    UUID rowUUID = CommonUtil.bytesToUUID(rs.getBytes(1));
+                    list.add(rowUUID);
+                    rowCount++;
+                }
+                log.info("Found {} rows", rowCount);
             }
         }
         return list;

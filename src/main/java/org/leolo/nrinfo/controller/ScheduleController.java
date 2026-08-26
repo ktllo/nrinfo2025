@@ -1,5 +1,7 @@
 package org.leolo.nrinfo.controller;
 
+import org.leolo.nrinfo.dto.request.ScheduleSearch;
+import org.leolo.nrinfo.dto.response.ScheduleSearchResult;
 import org.leolo.nrinfo.dto.response.TrainSchedule;
 import org.leolo.nrinfo.dto.response.TrainScheduleEntry;
 import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
@@ -10,17 +12,16 @@ import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
 import org.leolo.nrinfo.model.Tiploc;
 import org.leolo.nrinfo.enums.TrainCategory;
+import org.leolo.nrinfo.service.APIAuthenticationService;
 import org.leolo.nrinfo.service.ScheduleService;
 import org.leolo.nrinfo.service.TiplocService;
+import org.leolo.nrinfo.service.UserPermissionService;
 import org.leolo.nrinfo.util.ScheduleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.sql.SQLException;
 import java.text.ParseException;
@@ -29,9 +30,11 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/schedule")
-public class ScheduleViewController {
+public class ScheduleController {
 
-    private static Logger log = LoggerFactory.getLogger(ScheduleViewController.class);
+    private static Logger log = LoggerFactory.getLogger(ScheduleController.class);
+    @Autowired private APIAuthenticationService authenticationService;
+    @Autowired private UserPermissionService userPermissionService;
 
     @Autowired
     private ScheduleService scheduleService;
@@ -231,32 +234,9 @@ public class ScheduleViewController {
             }
         }
         for (ScheduleDetail sd: schedule.getDetailList()) {
-            TrainScheduleEntry entry = new TrainScheduleEntry();
-            Tiploc tiploc = locations.get(sd.getLocation());
-            if (tiploc == null) {
-                log.warn("No tiploc record found for location {}", sd.getLocation());
-                continue;
-            }
-            entry.setTiplocCode(tiploc.getTiplocCode());
-            entry.setLocationName(tiploc.getDescription());
-            entry.setCrsCode(tiploc.getCrsCode());
-            //Fill in the time
-            entry.setWttArrivalTime(formatTime(fullTime, sd.getArrivalTime()));
-            entry.setWttPassTime(formatTime(fullTime, sd.getPassTime()));
-            entry.setWttDepartureTime(formatTime(fullTime, sd.getDepartureTime()));
-            entry.setGbttArrivalTime(formatTime(fullTime, sd.getPublicArrivalTime()));
-            entry.setGbttDepartureTime(formatTime(fullTime, sd.getPublicDepartureTime()));
-            //Pathing
-            //Path in, Line out
-            entry.setPath(sd.getPath());
-            entry.setPlatform(sd.getPlatform());
-            entry.setLine(sd.getLine());
-            //Allowance
-            entry.setPathingAllowance(formatTime(fullTime, sd.getPathingAllowance()));
-            entry.setPerformanceAllowance(formatTime(fullTime, sd.getPerformanceAllowance()));
-            entry.setEngineeringAllowance(formatTime(fullTime, sd.getEngineeringAllowance()));
+            TrainScheduleEntry entry = fillEntryInfo(sd);
             int instance = sd.getLocationInstance();
-            ScheduleAssociation sa = scheduleService.getAssociation(associations, schedule.getTrainUid(), tiploc.getTiplocCode(), instance);
+            ScheduleAssociation sa = scheduleService.getAssociation(associations, schedule.getTrainUid(), sd.getLocation(), instance);
             if (sa != null) {
                 log.info("Association found! {}", sa);
                 if (!sa.getStpIndicator().equalsIgnoreCase("C") && sa.getAssocCategory() != null) {
@@ -287,11 +267,91 @@ public class ScheduleViewController {
         return ResponseEntity.ok(Map.of("result","success", "schedule", trainSchedule));
     }
 
+    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail) {
+        SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
+        TrainScheduleEntry entry = new TrainScheduleEntry();
+        Tiploc tiploc = tiplocService.getTiplocByTiplocCode(detail.getLocation());
+        if (tiploc == null) {
+            log.warn("No tiploc record found for location {}", detail.getLocation());
+            return null;
+        }
+        entry.setTiplocCode(tiploc.getTiplocCode());
+        entry.setLocationName(tiploc.getDescription());
+        entry.setCrsCode(tiploc.getCrsCode());
+        //Fill in the time
+        entry.setWttArrivalTime(formatTime(fullTime, detail.getArrivalTime()));
+        entry.setWttPassTime(formatTime(fullTime, detail.getPassTime()));
+        entry.setWttDepartureTime(formatTime(fullTime, detail.getDepartureTime()));
+        entry.setGbttArrivalTime(formatTime(fullTime, detail.getPublicArrivalTime()));
+        entry.setGbttDepartureTime(formatTime(fullTime, detail.getPublicDepartureTime()));
+        //Pathing
+        //Path in, Line out
+        entry.setPath(detail.getPath());
+        entry.setPlatform(detail.getPlatform());
+        entry.setLine(detail.getLine());
+        //Allowance
+        entry.setPathingAllowance(formatTime(fullTime, detail.getPathingAllowance()));
+        entry.setPerformanceAllowance(formatTime(fullTime, detail.getPerformanceAllowance()));
+        entry.setEngineeringAllowance(formatTime(fullTime, detail.getEngineeringAllowance()));
+        return entry;
+    }
+
     private static String formatTime(SimpleDateFormat format, Date time) {
         if (format == null || time == null) {
             return null;
         }
         return format.format(time);
+    }
+
+    @RequestMapping(
+            path = "/search",
+            method = RequestMethod.POST
+    ) public ResponseEntity<?> search(
+            @RequestBody ScheduleSearch searchParameter
+            ) {
+        boolean isAuthenticated = authenticationService.isAuthenticated();
+        ScheduleSearch.ValidateMode validateMode = null;
+        int userId = -1;
+        if (!isAuthenticated) {
+            log.debug("User is not authenticated, will restrict the search");
+            validateMode = ScheduleSearch.ValidateMode.PUBLIC;
+        } else {
+            userId = authenticationService.getUserId();
+            log.debug("User is authenticated with UID {}", userId);
+            if (userPermissionService.hasPermission("SUPER_SCH_SEARCH")) {
+                validateMode = ScheduleSearch.ValidateMode.SUPER;
+            } else {
+                validateMode = ScheduleSearch.ValidateMode.REGULAR;
+            }
+        }
+        log.debug("Validate mode: {}", validateMode);
+        searchParameter.normalize();
+        searchParameter.validate(validateMode);
+        List<ScheduleSearchResult> searchResult = new ArrayList<>();
+        HashSet<String> locationGroupMember = new HashSet<>();
+        locationGroupMember.add(searchParameter.getLocation());
+        log.debug("Search parameter: {}", searchParameter);
+        try {
+            locationGroupMember.addAll(tiplocService.getGroupMembers(searchParameter.getLocation()));
+            List<UUID> trainUuids = scheduleService.searchTrainSchedule(searchParameter);
+            for (UUID uuid: trainUuids) {
+                ScheduleSearchResult result = new ScheduleSearchResult();
+                Schedule schedule = scheduleService.getScheduleByUUID(uuid);
+                result.setSummary(fillSummary(schedule, searchParameter.getFromTime()));
+                if (searchParameter.getLocation()!=null) {
+                    for (ScheduleDetail scheduleDetail : schedule.getDetailList()) {
+                        if (locationGroupMember.contains(scheduleDetail.getLocation())) {
+                            result.getDetails().add(fillEntryInfo(scheduleDetail));
+                        }
+                    }
+                }
+                searchResult.add(result);
+            }
+        } catch (SQLException e) {
+            log.error("There are error when searching for schedule - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Unable to search train schedule","There are error when searching train schedule. Please try again later.");
+        }
+        return ResponseEntity.ok(Map.of("result","success", "schedules", searchResult));
     }
 
 }

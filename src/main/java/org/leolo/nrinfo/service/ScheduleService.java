@@ -5,6 +5,8 @@ import org.leolo.nrinfo.dao.DatabaseOperationResult;
 import org.leolo.nrinfo.dao.ScheduleDao;
 import org.leolo.nrinfo.dao.TrainOperatorDao;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
+import org.leolo.nrinfo.dto.request.ScheduleSearch;
+import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.enums.PowerType;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.slf4j.Logger;
@@ -14,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -308,6 +311,15 @@ public class ScheduleService {
             numericDbInstance = Integer.parseInt(dbInstance);
         }
         return targetInstance == numericDbInstance;
+    }
 
+    public List<UUID> searchTrainSchedule(ScheduleSearch scheduleSearch) throws SQLException {
+        Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
+        Duration cacheAge = Duration.between(cacheDate, Instant.now());
+        if (cacheAge.compareTo(Duration.ofDays(1)) > 0) {
+            log.info("Cache is too old, rebuilding them!");
+            scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
+        }
+        return scheduleDao.searchTrainSchedule(scheduleSearch);
     }
 }
