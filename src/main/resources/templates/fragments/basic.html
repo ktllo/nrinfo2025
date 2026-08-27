@@ -8,6 +8,21 @@
                 crossorigin="anonymous"></script>
     </head>
     <body>
+        <header th:fragment="header">
+            <div class="banner header" th:if="${authStatus=='Y'}">
+                Welcome User!
+                <a href="/logout">Logout</a>
+            </div>
+            <div class="banner header" th:unless="${authStatus=='Y'}">
+                <a href="/login">Login</a>
+            </div>
+            <div id="generic_popup_div" class="message" th:if="${generic_popup_message}">
+                <div style="text-align: right" onclick="$('#generic_popup_div').fadeOut(function(){$('#generic_popup_div').remove();});">
+                    Close
+                </div>
+                <span th:text="${generic_popup_message}"></span>
+            </div>
+        </header>
         <footer th:fragment="footer">
             <hr>
             <div style="font-size: smaller; text-align: center">

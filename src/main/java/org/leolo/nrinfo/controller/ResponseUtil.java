@@ -3,8 +3,8 @@ package org.leolo.nrinfo.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,6 +30,23 @@ public class ResponseUtil {
     }
     public static ResponseEntity<Map<String, String>> buildNotFoundResponse() {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status","error","message","The requested resource does not exist"));
+    }
+    public static ResponseEntity<Map<String, String>> buildNotFoundResponse(String additionalInfo) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("status","error","message","The requested resource does not exist", "extra_info", additionalInfo));
+    }
+    public static ResponseEntity<Map<String, String>> buildNotImplementedResponse() {
+        return  ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED).body(Map.of("status","error","message","The requested resource is not implemented"));
+    }
+    public static ResponseEntity<Map<String, String>> buildFullErrorResponse(String error, String details) {
+        logger.warn("REQ ERROR {}: {}", error, details);
+        return  ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status","error","message",error,"details",details));
+    }
+
+    public static ResponseEntity<Map<String, String>> buildBadRequestResponse() {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status","error","message","Bad request"));
+    }
+    public static ResponseEntity<Map<String, String>> buildBadRequestResponse(String message) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status","error","message",message));
     }
 
 }

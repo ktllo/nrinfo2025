@@ -1,5 +1,13 @@
 package org.leolo.nrinfo.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.Getter;
+import org.jetbrains.annotations.NotNull;
+import org.leolo.nrinfo.Constants;
+import org.leolo.nrinfo.controller.AITestController;
+import org.leolo.nrinfo.controller.PerformanceController;
+import org.leolo.nrinfo.controller.ResponseUtil;
 import org.leolo.nrinfo.dto.external.networkrail.PerformanceDetail;
 import org.leolo.nrinfo.dto.external.networkrail.RealTimePerformance;
 import org.leolo.nrinfo.dto.external.networkrail.RealTimePerformanceData;
@@ -7,15 +15,26 @@ import org.leolo.nrinfo.dto.response.PerformanceData;
 import org.leolo.nrinfo.dto.response.PerformanceMetric;
 import org.leolo.nrinfo.enums.RAG;
 import org.leolo.nrinfo.enums.Trend;
+import org.leolo.nrinfo.exception.ResourceNotFoundException;
+import org.leolo.nrinfo.model.PendingData;
 import org.leolo.nrinfo.model.PerformanceEntry;
 import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
+import org.leolo.nrinfo.model.ai.CompletionResult;
+import org.leolo.nrinfo.model.ai.Prompt;
+import org.leolo.nrinfo.model.ai.SystemPrompt;
+import org.leolo.nrinfo.model.ai.UserPrompt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.io.Serializable;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.*;
+
+import static org.leolo.nrinfo.Constants.CacheKey.NATIONAL_SUMMARY;
 
 @Service
 public class RealTimePerformanceService {
@@ -24,6 +43,12 @@ public class RealTimePerformanceService {
 
     private static final Object SYNC_LOCK = new Object();
 
+    @Autowired
+    private AIGenerationService aiGenerationService;
+
+    @Autowired
+    private GenericCacheService genericCacheService;
+
     private RealTimePerformanceSnapshot snapshot;
 
     public RealTimePerformanceSnapshot getSnapshot() {
@@ -31,6 +56,9 @@ public class RealTimePerformanceService {
             return snapshot;
         }
     }
+
+
+    private ObjectMapper objectMapper = new ObjectMapper();
 
 
     public void submitNewSnapshot(RealTimePerformance rtp) {
@@ -79,6 +107,13 @@ public class RealTimePerformanceService {
             snapshot.getNationalOperator().put(pe.getCode(), pe);
         }
         for (RealTimePerformanceData.OperatorPage op : rtp.getRtppmData().getOperatorPages()) {
+            int threshold = 0;
+            if(op.getPerformanceTolerance() != null) {
+                for (RealTimePerformanceData.PerformanceTolerance pt : op.getPerformanceTolerance()) {
+                    threshold = pt.getTimeband();
+                    break;
+                }
+            }
             PerformanceEntry pe = PerformanceEntry.builder()
                     .code(op.getOperatorPerformanceDetail().getCode())
                     .name(op.getOperatorPerformanceDetail().getName())
@@ -91,6 +126,7 @@ public class RealTimePerformanceService {
                     .rollingPpmValue(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getValue())
                     .rollingRagValue(RAG.get(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getRag()))
                     .trend(Trend.get(op.getOperatorPerformanceDetail().getRollingPerformanceMetric().getTrend()))
+                    .threshold(threshold)
                     .build();
             if (op.getOperatorServiceGroup()!=null) {
                 pe.setSubentry(new ArrayList<>());
@@ -211,6 +247,112 @@ public class RealTimePerformanceService {
             pd.getOperators().add(pm);
         }
         return pd;
+    }
+
+    public CompletionResult getNationalSummary(RealTimePerformanceSnapshot snapshot) {
+        if (snapshot == null) {
+            log.info("No snapshot available!");
+            throw new RuntimeException("No data received yet");
+        }
+        PerformanceSummaryData psd = new PerformanceSummaryData();
+        psd.operatorName = "National Rail"; //This is a generic placeholder
+        psd.snapshotTime = new Date(snapshot.getSnapshotTime().toEpochMilli());
+        psd.threshold = 0;
+        for (PerformanceEntry pe : snapshot.getNationalSector()) {
+            psd.sectors.add(extractSectorSummary(pe));
+        }
+        String userPrompt = null;
+        try {
+            userPrompt = "```json" + "\n" +
+                    objectMapper.writeValueAsString(psd) + "\n" +
+                    "```" + "\n";
+        } catch (JsonProcessingException e) {
+            log.error("Unable to serialize psd", e);
+            throw new RuntimeException("Unable to serialize data");
+        }
+        List<Prompt> prompts = List.of(
+                new SystemPrompt(Constants.AIPrompt.SYSTEM_PERFORMANCE_SUMMARY),
+                new UserPrompt(userPrompt)
+        );
+        CompletionResult completionResult = aiGenerationService.doCompletion(prompts, 5000);
+        genericCacheService.addToCache(NATIONAL_SUMMARY, completionResult, 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+        return completionResult;
+    }
+
+    public CompletionResult getOperatorSummary(RealTimePerformanceSnapshot snapshot, String operatorId, final String CACHE_KEY) {
+        if (snapshot == null) {
+            log.info("No snapshot available!");
+            throw new RuntimeException("No data received yet");
+        }
+        PerformanceEntry pe = snapshot.getOperatorDetails().get(operatorId);
+        PerformanceSummaryData psd = new PerformanceSummaryData();
+        if (pe == null) {
+            log.warn("Operator {} not found", operatorId);
+            throw new ResourceNotFoundException("Operator not found");
+        }
+        psd.operatorName = pe.getName();
+        psd.snapshotTime = new Date(snapshot.getSnapshotTime().toEpochMilli());
+        psd.threshold = pe.getThreshold();
+        if (pe.getSubentry()!= null && !pe.getSubentry().isEmpty()) {
+            for (PerformanceEntry pes :pe.getSubentry()) {
+                psd.sectors.add(extractSectorSummary(pes));
+            }
+        } else {
+            SectorSummaryData ssd = new SectorSummaryData();
+            ssd.sectorName = "Overall";
+            ssd.onTime = pe.getOnTime();
+            ssd.late = pe.getLate();
+            ssd.cancelled = pe.getCancelOrVeryLate();
+            psd.sectors.add(ssd);
+        }
+        String userPrompt = null;
+        try {
+            userPrompt = "```json" + "\n" +
+                    objectMapper.writeValueAsString(psd) + "\n" +
+                    "```" + "\n";
+        } catch (JsonProcessingException e) {
+            log.error("Unable to serialize psd", e);
+            throw new RuntimeException("Unable to serialize data");
+        }
+        List<Prompt> prompts = List.of(
+                new SystemPrompt(Constants.AIPrompt.SYSTEM_PERFORMANCE_SUMMARY),
+                new UserPrompt(userPrompt)
+        );
+        CompletionResult completionResult = aiGenerationService.doCompletion(prompts, 5000);
+        if (genericCacheService.hasEntry(CACHE_KEY)) {
+            PendingData<CompletionResult> pendingData = (PendingData<CompletionResult>) genericCacheService.getEntry(CACHE_KEY);
+            pendingData.setData(completionResult);
+        } else {
+            genericCacheService.addToCache(CACHE_KEY, new PendingData<CompletionResult>(completionResult), 600000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+        }
+        return completionResult;
+    }
+
+    private static @NotNull SectorSummaryData extractSectorSummary(PerformanceEntry pes) {
+        SectorSummaryData ssd = new SectorSummaryData();
+        ssd.sectorName = pes.getName();
+        ssd.onTime = pes.getOnTime();
+        ssd.late = pes.getLate();
+        ssd.cancelled = pes.getCancelOrVeryLate();
+        return ssd;
+    }
+
+    @Getter
+    static
+    class PerformanceSummaryData implements Serializable {
+        String operatorName;
+        int threshold;
+        Collection<SectorSummaryData> sectors = new ArrayList<>();
+        Date snapshotTime;
+    }
+
+    @Getter
+    static
+    class SectorSummaryData implements Serializable {
+        String sectorName;
+        int onTime;
+        int late;
+        int cancelled;
     }
 
 }

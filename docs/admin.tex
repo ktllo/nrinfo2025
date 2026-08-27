@@ -1,0 +1,184 @@
+% Preamble
+\documentclass[12pt]{report}
+% Packages
+\usepackage{amsmath}
+\usepackage[margin=20mm]{geometry}
+\usepackage{xcolor}
+\usepackage[colorlinks=true]{hyperref}
+\usepackage{listings}
+\usepackage{iftex}
+\usepackage{datetime}
+\usepackage{longtable}
+
+\setcounter{tocdepth}{1}
+\input{shared.tex}
+% Metadata
+\title{Administrator Guide\\Version 0.1}
+\author{Leo LO}
+\date{5 Feb 2026}
+% Document
+\begin{document}
+    \maketitle
+    \chapter*{Version History}
+    \begin{tabular}{|l|l|l|p{10cm}|}
+        \hline
+        Version & Date & Author & Notes \\\hline
+        0.1 & Feb 2026 & Leo Lo & Initial Release \\\hline
+    \end{tabular}
+    \tableofcontents
+
+    \pagebreak
+    \hspace{0pt}
+    \vfill
+    The key words ``MUST'', ``MUST NOT'', ``REQUIRED'', ``SHALL'', ``SHALL NOT'', ``SHOULD'', ``SHOULD NOT'',
+    ``RECOMMENDED'', ``NOT RECOMMENDED'', ``MAY'', and ``OPTIONAL'' in this document are to be interpreted as described
+    in \href{https://datatracker.ietf.org/doc/html/bcp14}{BCP 14}\footnote{https://datatracker.ietf.org/doc/html/bcp14}
+    [\href{https://datatracker.ietf.org/doc/html/rfc2119}{RFC2119}]\footnote{https://datatracker.ietf.org/doc/html/rfc2119}
+    [\href{https://datatracker.ietf.org/doc/html/rfc8174}{RFC8174}]\footnote{https://datatracker.ietf.org/doc/html/rfc8174}
+    when, and only when, they appear in all capitals, as shown here.
+    \vfill
+    \hspace{0pt}
+    Build by \texenginefull\ on \today\ at \currenttime
+    \vfill
+    \hspace{0pt}
+    \pagebreak
+    \chapter{Common Administrator Task}\label{ch:common-tasks}
+    \section{All password lost}\label{sec:all-password-lost}
+    If all the administrator's password are lost, and need to be reset, this cannot be done in the system itself, but
+    via updating the password directly.
+
+    \begin{infobox}
+        This steps can also update regular user's password.
+        But you SHOULD follow the usual step to reset the password as this method will require the password to be
+        shared via plaintext.
+    \end{infobox}
+
+    In order to reset the password in this manner, you MUST have access to the following things ---
+    \begin{itemize}
+        \item Access to API call \texttt{/api/util/password}.
+        This is allowed by default by the system but may not be allowed based on the web server settings.
+        \item Access to the database, and able execute ``UPDATE'' to the database table ``user''.
+    \end{itemize}
+
+    \begin{infobox}
+        It is RECOMMENDED to use a randomly generated password
+    \end{infobox}
+
+    \step{1} Make an API call to \texttt{/api/util/password}, this API call will hash the password for you.
+    An example will be \texttt{/api/util/password?password=YOUR\_PASSWORD\_HERE}.
+    
+    \step{2} Note the password hash returned from the API call.
+    It is located at a JSON property ``password''.
+
+    \step{3} Execute and commit the following SQL on the database.
+    Replace the value as instructed
+    \begin{lstlisting}[language=SQL,
+           basicstyle=\ttfamily,
+           numbers=left,
+           numberstyle=\tiny
+    ]
+UPDATE `user` SET
+    password = '<password hash>',
+    last_password_date = NOW(),
+    force_password_change = 1
+WHERE username = '<username>';
+    \end{lstlisting}
+
+    \begin{infobox}
+        You MAY skip the `force\_password\_change` changes if you do not wish you force a password changes afterwards.
+        This is only recommended if the account is being used by another automated system for security reason.
+
+        Please note that the password may be stored as plaintext in the server access log, depending on the settings.
+    \end{infobox}
+
+    \chapter{Configurations}\label{ch:configurations}
+    \section{Configuration Infomations}\label{sec:configuration-infomations}
+    \begin{longtable}{|p{.40\textwidth}|p{.15\textwidth}|p{.45\textwidth}|}\hline
+    \multicolumn{3}{|c|}{Authentication}\\\hline
+    Configuration Name & Type & Description \\\hline\endhead
+    allow\_register & boolean & True if users are allowed to register themselves. \\\hline
+    auth.force\_pwd\_chg\_token\_age & Integer & The number of seconds which a password reset token is valid for
+    when it is generated for a forced password change.
+    This number MUST be greater than 0, and SHOULD be long enough for a user to set their password.
+    It is RECOMMENDED to set the value no less than 300 seconds, but no more than 3600 seconds for security reason.
+    \\\hline
+    auth.permission\_cache & Integer & The number of seconds which the user's role will be cached.
+    This cache can be manually pruned by administrator if needed.\\\hline
+    auth.token\_life & Integer & The number which a authentication token is valid  \\\hline
+    authfail.factor\_base & Double & The base amount of the delay when there are authentication failure.
+    This is the value $\mbox{Delay}_{base}$ in section~\ref{sec:response-delay}\\\hline
+    authfail.factor\_exp & Double & The exponent amount of the delay when there are authentication failure.
+    This is the value $\mbox{exponent}$ in section~\ref{sec:response-delay}.
+    This value SHOULD be greater than 1. \\\hline
+    authfail.min\_delay & Integer & The minimum amount of the delay when there are authentication failure.
+    This is the value $\mbox{Delay}_{min}$ in section~\ref{sec:response-delay}. \\\hline
+    authfail.max\_delay& Integer &  The maximum amount of the delay when there are authentication failure.
+    This is the value $\mbox{Delay}_{min}$ in section~\ref{sec:response-delay}.
+    Thus value MUST be greater than the configuration for authfail.min\_delay. \\\hline
+    \end{longtable}
+    \begin{longtable}{|p{.40\textwidth}|p{.15\textwidth}|p{.45\textwidth}|}\hline
+    \multicolumn{3}{|c|}{IRC}\\\hline
+    Configuration Name & Type & Description \\\hline\endhead
+        irc.enabled & Boolean & Enable the IRC bot function.\\\hline
+        irc.networks & List & A comma separated list of network keys.
+        This will be part of the name of network specific configuration in this section and will be denoted as
+        ``network'' in this document\\\hline
+    \end{longtable}
+    \begin{longtable}{|p{.40\textwidth}|p{.15\textwidth}|p{.45\textwidth}|}\hline
+    \multicolumn{3}{|c|}{Job}\\\hline
+    Configuration Name & Type & Description \\\hline\endhead
+        job.log\_data & boolean & Log data received in the job log if the job support this feature.
+
+        \textbf{WARNING:} Although some jobs support this, they may not work if the data is too long.
+        The database is NOT designed to log a large amount of data.\\\hline
+    job.threadpool.size & Integer & Number of thread to process the queueing job. \\\hline
+    system\_job\_runner & String & The username of the user to own the job started by a timer \\\hline
+    \multicolumn{3}{|l|}{Please refer to job detail page for job specific configurations}\\\hline
+    \end{longtable}
+    \begin{longtable}{|p{.40\textwidth}|p{.15\textwidth}|p{.45\textwidth}|}\hline
+    \multicolumn{3}{|c|}{Network Rail Data Stream}\\\hline
+    Configuration Name & Type & Description \\\hline\endhead
+    network.stomp.enabled & Boolean & Is the data stream from Network Rail enabled \\\hline
+    networkrail.batch\_size & Integer & The batch size when importing data \\\hline
+    networkrail.username & String & The username to login to Network Rail data \\\hline
+    networkrail.password & Password & The password to login to Network Rail data \\\hline
+    networkrail.schedule\_cache & Integer & Number of days which the UID - schedule mapping will be created \\\hline
+    schedule.retain\_period & Integer & Number of days which the past data will be retained.
+    Unless the schedule had been stared by an user.\\\hline
+    \multicolumn{3}{|l|}{Please refer to section~\ref{subsec:network-rail-data-stream} on how to register}\\\hline
+    \end{longtable}
+    \begin{longtable}{|p{.40\textwidth}|p{.15\textwidth}|p{.45\textwidth}|}\hline
+    \multicolumn{3}{|c|}{Schedule}\\\hline
+    Configuration Name & Type & Description \\\hline\endhead
+    schedule.default\_size & Integer & The default size of the result when searching for schedules \\\hline
+    schedule.max\_size & Integer & The maximum size of the result when searching for schedules \\\hline
+    \end{longtable}
+
+
+    \section{Registration of external feed}\label{sec:registration-of-external-feed}
+    \subsection{Network Rail}\label{subsec:network-rail-data-stream}
+    You may register to Network Rail data stream at \href{https://publicdatafeeds.networkrail.co.uk}{https://publicdatafeeds.networkrail.co.uk}.
+    Then you can enter the username and password in the configuration.
+
+    \begin{infobox}
+        The password will be stored in plaintext in the system, and may be transmitted to remote system in plaintext.
+        You SHOULD use a unique password for this system.
+    \end{infobox}
+
+    \chapter{Implementation details}\label{ch:implementation-details}
+    This section will provide some implementation detail which may affect how configuration are set.
+    \section{Response Delay}\label{sec:response-delay}
+    When authentication failed, the delay of n-th failure will be calculated as follows:
+
+    $$\mbox{Delay}_{base} = \mbox{Base Time}\times\mbox{exponent}^{n}$$
+    $$\mbox{Delay}_{final} = clamp(\mbox{Delay}_{base},\mbox{Delay}_{min},\mbox{Delay}_{max})\footnote{%
+        \texttt{clamp(value, lower, upper)} ensures \texttt{value} stays within $[\text{lower}, \text{upper}]$. Equivalently, $\min(\text{upper}, \max(\text{value}, \text{lower}))$.%
+    }$$
+
+    \begin{infobox}
+        Although it is permitted to have exponent be less than 1, it is NOT RECOMMENDED as this will reduce the amount
+        of delay as the number of failure increases.
+        This is contra to usual security protocol as the delay should be increases when there are more failures.
+    \end{infobox}
+
+\end{document}

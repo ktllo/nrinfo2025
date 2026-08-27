@@ -1,0 +1,135 @@
+{
+  "VSTPCIFMsgV1": {
+    "schedule": {
+      "schedule_segment":[
+        {
+          "schedule_location": [
+            {
+              "location": {"tiploc":{"tiploc_id":"LINCLNC"}},
+              "scheduled_pass_time":" ",
+              "scheduled_departure_time":"084500",
+              "scheduled_arrival_time":" ",
+              "public_departure_time":"      ",
+              "public_arrival_time":" ",
+              "CIF_pathing_allowance":"3",
+              "CIF_path":" ",
+              "CIF_activity":"TB"
+            },{
+              "location":{"tiploc":{"tiploc_id":"WHOLMSJ"}},
+              "scheduled_pass_time":"085000",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"1"
+            },{
+              "location":{"tiploc":{"tiploc_id":"BOUTHMJ"}},
+              "scheduled_pass_time":"085230",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"2"
+            },{
+              "location":{"tiploc":{"tiploc_id":"NWRKCEJ"}},
+              "scheduled_pass_time":"091030",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"2"
+            },{
+              "location":{"tiploc":{"tiploc_id":"NWRKFC"}},
+              "scheduled_pass_time":"091300",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"2"
+            },{
+              "location":{"tiploc":{"tiploc_id":"NWRKCAS"}},
+              "scheduled_pass_time":"091700",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"2"
+            },{
+              "location":{"tiploc":{"tiploc_id":"STYTHPX"}},
+              "scheduled_pass_time":"092300",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"1"
+            },{
+              "location":{"tiploc":{"tiploc_id":"FISKRTN"}},
+              "scheduled_pass_time":"092600",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"5"
+            },{
+              "location":{"tiploc":{"tiploc_id":"LOWDHAM"}},
+              "scheduled_pass_time":"093600",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"5"
+            },{
+              "location":{"tiploc":{"tiploc_id":"NTHRFLJ"}},
+              "scheduled_pass_time":"094600",
+              "scheduled_departure_time":"      ",
+              "scheduled_arrival_time":"      ",
+              "public_departure_time":"      ",
+              "public_arrival_time":"      ",
+              "CIF_pathing_allowance":"5"
+            },{
+              "location":{"tiploc":{"tiploc_id":"NTNG"}},
+              "scheduled_pass_time":" ",
+              "scheduled_departure_time":" ",
+              "scheduled_arrival_time":"095600",
+              "public_departure_time":" ",
+              "public_arrival_time":"      ",
+              "CIF_platform":"6",
+              "CIF_performance_allowance":" ",
+              "CIF_pathing_allowance":" ",
+              "CIF_line":" ",
+              "CIF_engineering_allowance":" ",
+              "CIF_activity":"TF"
+            }
+          ],
+          "signalling_id":"5Z01",
+          "atoc_code":"EM",
+          "CIF_train_service_code":"22277000",
+          "CIF_train_category":"EE",
+          "CIF_timing_load":"E",
+          "CIF_speed":"100",
+          "CIF_power_type":"DMU",
+          "CIF_course_indicator":"1"
+        }
+      ],
+      "transaction_type":"Create",
+      "train_status":" ",
+      "schedule_start_date":"2026-05-08",
+      "schedule_end_date":"2026-05-08",
+      "schedule_days_runs":"0000100",
+      "applicable_timetable":"N",
+      "CIF_train_uid":" 73341",
+      "CIF_stp_indicator":"N"
+    },
+    "Sender":{
+      "organisation":"Network Rail",
+      "application":"TSIA",
+      "component":"INTEGRALE-VSTP",
+      "userID":"#QVP5128",
+      "sessionID":"Y689750"
+    },
+    "classification":"industry",
+    "timestamp":"1778219856000",
+    "owner":"Network Rail",
+    "originMsgId":"2026-05-08T05:57:36-00:00@vstp.networkrail.co.uk"
+  }
+}

@@ -2,6 +2,7 @@ package org.leolo.nrinfo.service;
 
 import jakarta.validation.constraints.NotNull;
 import org.leolo.nrinfo.dao.UserDao;
+import org.leolo.nrinfo.dto.request.UserRegister;
 import org.leolo.nrinfo.model.AuthenticationResult;
 import org.leolo.nrinfo.model.User;
 import org.leolo.nrinfo.util.RandomUtil;
@@ -12,7 +13,6 @@ import org.slf4j.MarkerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.sql.DataSource;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 
@@ -26,6 +26,7 @@ public class UserService {
     @Autowired private UserDao userDao;
     @Autowired private PasswordService passwordService;
     @Autowired private ConfigurationService configurationService;
+
 
     public AuthenticationResult authenticate(@NotNull String username, @NotNull String password) {
         if (username == null || password == null) {
@@ -124,5 +125,46 @@ public class UserService {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public boolean checkPasswordComplexity(String password) {
+        //TODO: Implement function
+        return password.length() >= 4 && password.length() <= 72;
+    }
+
+    public synchronized AuthenticationResult doRegisterUser(UserRegister userRegister) throws SQLException {
+        try {
+            if (!configurationService.getBoolean("allow_register")) {
+                //Open registration is not enabled.
+                if (userRegister.getInviteKey() == null || userRegister.getInviteKey().isEmpty()) {
+                    throw new IllegalArgumentException("invite key is required");
+                }
+                if (userDao.getInviteKeyUseLeft(userRegister.getInviteKey()) <= 0) {
+                    throw new IllegalArgumentException("invite key is invalid, or allowed usage had been reached");
+                }
+            }
+            if (!checkPasswordComplexity(userRegister.getPassword())) {
+                throw new IllegalArgumentException("password does not meet requirements");
+            }
+            int newUserId = userDao.createUser(userRegister.getUsername(), passwordService.encryptPassword(userRegister.getPassword()));
+            if (newUserId <= 0) {
+                throw new SQLException("Unable to create new user");
+            }
+            String [] roles = configurationService.getString("register.default_role").split(",");
+            for (String role : roles) {
+                userDao.addRole(newUserId, role);
+            }
+            AuthenticationResult ar = new AuthenticationResult();
+            ar.setUserId(newUserId);
+            ar.setSuccess(true);
+            return ar;
+        } catch (Exception e) {
+            log.error(e.getMessage(), e);
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    public void changePassword(int userId, String oldPassword, String newPassword) {
+
     }
 }

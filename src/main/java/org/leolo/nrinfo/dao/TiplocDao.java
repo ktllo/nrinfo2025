@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.dto.response.StationSearchResult;
 import org.leolo.nrinfo.model.Tiploc;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,8 +12,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 
 @Repository
 public class TiplocDao extends BaseDao{
@@ -149,6 +152,225 @@ public class TiplocDao extends BaseDao{
         tiploc.setShortDescription(rs.getString("description"));
         tiploc.setDescription(rs.getString("tps_description"));
         return tiploc;
+    }
+
+    public List<Tiploc> doDetailedSearch(String query, int maxSize, int offSet) throws SQLException {
+        query = query.toUpperCase();
+        String processedQuery = "%"+query+"%";
+        List<Tiploc> tiplocs = new ArrayList<>(maxSize);
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement("""
+                                ( 
+                                  SELECT tiploc_code, nalco, stanox, crs_code, description, tps_description, 0 AS rank 
+                                  FROM tiploc 
+                                  WHERE crs_code = ? 
+                                )
+                                UNION ALL 
+                                ( 
+                                  SELECT tiploc_code, nalco, stanox, crs_code, description, tps_description, 1 AS rank
+                                  FROM tiploc
+                                  WHERE 
+                                        tps_description = ?
+                                    AND (crs_code <> ? or crs_code is null)
+                                )
+                                UNION ALL
+                                (
+                                  SELECT tiploc_code, nalco, stanox, crs_code, description, tps_description, 2 AS rank
+                                  FROM tiploc
+                                  WHERE 
+                                        tps_description LIKE ?
+                                    AND (crs_code <> ? or crs_code is null)
+                                ) 
+                                UNION ALL
+                                (
+                                  SELECT tiploc_code, nalco, stanox, crs_code, description, tps_description, 3 AS rank
+                                  FROM tiploc
+                                  WHERE 
+                                        nalco = ?
+                                ) 
+                                UNION ALL
+                                (
+                                  SELECT tiploc_code, nalco, stanox, crs_code, description, tps_description, 4 AS rank
+                                  FROM tiploc
+                                  WHERE 
+                                        stanox = ?
+                                ) 
+                                ORDER BY rank, tps_description
+                                LIMIT ?,?
+                                """)
+        ) {
+            setString(ps, 1, query);
+            setString(ps, 2, query);
+            setString(ps, 3, query);
+            setString(ps, 4, processedQuery);
+            setString(ps, 5, query);
+            setString(ps, 6, query);
+            setString(ps, 7, query);
+            ps.setInt(8, offSet);
+            ps.setInt(9, maxSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(parseResultSet(rs));
+                }
+            }
+        }
+        return tiplocs;
+    }
+
+    public List<StationSearchResult> doSimpleSearch(String query, int maxSize, int offSet) throws SQLException {
+        query = query.toUpperCase();
+        String processedQuery = query+"%";
+        List<StationSearchResult> results = new ArrayList<StationSearchResult>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                                ( 
+                                  SELECT tiploc_code, crs_code, tps_description, 0 AS rank 
+                                  FROM tiploc 
+                                  WHERE crs_code = ? 
+                                )
+                                UNION ALL 
+                                ( 
+                                  SELECT tiploc_code, crs_code, tps_description, 1 AS rank
+                                  FROM tiploc
+                                  WHERE crs_code IS NOT NULL
+                                    AND tps_description = ?
+                                    AND crs_code <> ?
+                                )
+                                UNION ALL
+                                (
+                                  SELECT tiploc_code, crs_code, tps_description, 2 AS rank
+                                  FROM tiploc
+                                  WHERE crs_code IS NOT NULL
+                                    AND tps_description LIKE ?
+                                    AND crs_code <> ?
+                                ) 
+                                ORDER BY rank, tps_description
+                                LIMIT ?,?
+                                """
+                )
+        ) {
+            ps.setString(1, query);
+            ps.setString(2, processedQuery);
+            ps.setString(3, query);
+            ps.setString(4, processedQuery);
+            ps.setString(5, query);
+            ps.setInt(6, offSet);
+            ps.setInt(7, maxSize);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(new StationSearchResult(
+                            rs.getString(3),
+                            rs.getString(1),
+                            rs.getString(2)
+                    ));
+                }
+            }
+        }
+        return results;
+    }
+
+    public List<String> findAssociatedTiplocs(String tiploc) throws SQLException {
+        ArrayList<String> tiplocs = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT group_member from v_auto_tiploc_group " +
+                                "where given_code = ? and group_member <> ? " +
+                                "order by group_member"
+                )
+        ) {
+            ps.setString(1, tiploc);
+            ps.setString(2, tiploc);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(rs.getString(1));
+                }
+            }
+        }
+        return tiplocs;
+    }
+
+    public List<String> findTiplocCodeByNalco(String nalco) throws SQLException {
+        ArrayList<String> tiplocs = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT tiploc.tiploc_code FROM tiploc WHERE nalco = ?"
+                )
+        ) {
+            ps.setString(1, nalco);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(rs.getString(1));
+                }
+            }
+        }
+        return tiplocs;
+    }
+
+    public List<String> findTiplocCodeByStanox(String stanox) throws SQLException {
+        ArrayList<String> tiplocs = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT tiploc.tiploc_code FROM tiploc WHERE stanox = ?"
+                )
+        ) {
+            ps.setString(1, stanox);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(rs.getString(1));
+                }
+            }
+        }
+        return tiplocs;
+    }    public List<String> findTiplocCodeByCrsCode(String crsCode) throws SQLException {
+        ArrayList<String> tiplocs = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        "SELECT tiploc.tiploc_code FROM tiploc WHERE crs_code = ?"
+                )
+        ) {
+            ps.setString(1, crsCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    tiplocs.add(rs.getString(1));
+                }
+            }
+        }
+        return tiplocs;
+    }
+
+    public List<String> getManualGroupMembers(String tiploc) throws SQLException {
+        ArrayList<String> groupMembers = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            SELECT
+                                tg2.tiploc_code
+                            FROM
+                                tiploc_group tg1
+                                JOIN tiploc_group tg2 ON tg1.tiploc_group_id=tg2.tiploc_group_id
+                            WHERE
+                                    tg1.tiploc_code <> tg2.tiploc_code
+                                and tg1.tiploc_code = ?
+                            """
+                )
+        ) {
+            ps.setString(1, tiploc);
+            log.debug("Looking for manual group members: TIPLOC:{}", tiploc);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    groupMembers.add(rs.getString(1));
+                }
+            }
+        }
+        return groupMembers;
     }
 
 }

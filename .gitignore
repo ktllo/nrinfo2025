@@ -33,5 +33,6 @@ build/
 .vscode/
 
 ## Configurations
-/src/main/resources/application.properties
 /logs/
+/src/main/resources/application-dev.properties
+/out/

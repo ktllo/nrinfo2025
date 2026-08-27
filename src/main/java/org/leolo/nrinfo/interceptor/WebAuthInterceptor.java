@@ -1,9 +1,13 @@
 package org.leolo.nrinfo.interceptor;
 
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.leolo.nrinfo.Constants;
+import org.leolo.nrinfo.service.WebAuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -15,6 +19,9 @@ import java.time.Instant;
 public class WebAuthInterceptor implements HandlerInterceptor {
 
     private Logger log = LoggerFactory.getLogger("WEB");
+
+    @Autowired
+    private WebAuthenticationService webAuthenticationService;
 
     /**
      * Interception point before the execution of a handler. Called after
@@ -39,6 +46,8 @@ public class WebAuthInterceptor implements HandlerInterceptor {
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        log.info("WebAuthInterceptor.preHandle called for {}", request.getRequestURI());
+        webAuthenticationService.loadSession(request.getSession());
         return HandlerInterceptor.super.preHandle(request, response, handler);
     }
 
@@ -67,7 +76,15 @@ public class WebAuthInterceptor implements HandlerInterceptor {
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
         HandlerInterceptor.super.postHandle(request, response, handler, modelAndView);
-        modelAndView.getModel().put("genTime", Instant.now());
+        if (modelAndView != null) {
+            String viewName = modelAndView.getViewName();
+            if (viewName != null && viewName.startsWith("redirect:")) {
+                //This is a redirect, and we don't put common attributes
+                return;
+            }
+            modelAndView.getModel().put("genTime", Instant.now());
+            modelAndView.getModel().put("authStatus", webAuthenticationService.isAuthenticated()?"Y":"N");
+        }
     }
 
     /**

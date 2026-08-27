@@ -52,3 +52,25 @@ h1 {
 .banner {
     background-color: orange;
 }
+.header {
+    font-size: large;
+    padding: 0.1em;
+}
+.error {
+    border-color: darkred;
+    border-width: 2px;
+    border-style: solid;
+    margin: 0.5ex;
+    padding: 0.5ex;
+    background: pink;
+    border-radius: 0.5ex;
+}
+.message {
+    border-color: pink;
+    border-width: 2px;
+    border-style: solid;
+    margin: 0.5ex;
+    padding: 0.5ex;
+    background: lightgoldenrodyellow;
+    border-radius: 0.5ex;
+}

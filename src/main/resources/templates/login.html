@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title th:text="${title}"></title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script src="/scripts/main.js"></script>
+    <script>
+        function validateForm() {
+            var ok = true;
+            if ($("#username").val() === "") {
+                $("#emUser").text("Username cannot be empty");
+                ok = false;
+            } else {
+                $("#emUser").text("");
+            }
+            if ($("#password").val() === "") {
+                $("#emPass").text("Password cannot be empty");
+                ok = false;
+            } else {
+                $("#emPass").text("");
+            }
+            return ok;
+        }
+    </script>
+</head>
+<body>
+<h1 th:text="${title}"></h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
+<div class="error" th:if="${error_message}" th:text="${error_message}"></div>
+<form th:action="@{/login}" method="post" onsubmit="return validateForm()">
+    <table>
+        <tr>
+            <th><label for="username">Username</label> </th>
+            <td><input type="text" name="username" id="username" th:value="${username}"></td>
+            <td><span id="emUser"></span></td>
+        </tr>
+        <tr>
+            <th><label for="password">Password</label></th>
+            <td><input type="password" name="password" id="password"></td>
+            <td><span id="emPass"></span></td>
+        </tr>
+        <tr>
+            <td colspan="3"><input type="submit" value="Login"></td>
+        </tr>
+    </table>
+</form>
+<div th:replace="~{fragments/basic.html :: footer}"></div>
+</body>
+</html>

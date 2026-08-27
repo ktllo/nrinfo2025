@@ -7,9 +7,32 @@
     <title th:text="${title}"></title>
     <script th:replace="~{fragments/basic.html :: jquery}"></script>
     <script src="/scripts/main.js"></script>
+    <script>
+        function dispAiSummary() {
+            var operatorId = "[[${code}]]";
+            var url = "";
+            if (operatorId === "nat") {
+                url = "/api/performance/summary";
+            } else {
+                url = "/api/performance/summary/"+operatorId;
+            }
+            $("#butgen").hide();
+            $("#aisummary_disp").text("Generating. This may take a few moments.");
+            $.ajax({
+                type: "GET",
+                url: url,
+                success: function (data) {
+                    var dispMsg = data.message;
+                    $("#aisummary_disp").html(dispMsg);
+                    $("#aisummary_footer").text(`Generated on ${data.generated}, took ${data.time_taken} ms. Token used: ${data.token_used}`);
+                }
+            });
+        }
+    </script>
 </head>
 <body>
 <h1 th:text="${title}"></h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
 <div class="banner">
     <table style="width: 100%">
         <tr>
@@ -80,6 +103,17 @@
         </tr>
     </table>
 </div>
+<div>
+    <div class="subtitle" id="subt_aisummary" onclick="toggle_display('aisummary')">
+        <span id="hint_aisummary" style="margin-left: 1em;margin-right: 1em">-</span><span>AI Summary</span>
+    </div>
+    <div class="container" id="cont_aisummary" style="padding-left: 1em; padding-right: 1em; box-sizing: border-box;">
+        <button id="butgen" onclick="dispAiSummary()">Generate</button>
+        <div id="aisummary_disp"></div>
+        <div id="aisummary_detail"></div>
+        <div id="aisummary_footer" style="font-size: small"></div>
+    </div>
+</div>
 <div th:if="${data.getSectors().size() > 0}">
     <div class="subtitle" id="subt_sector" onclick="toggle_display('sector')">
         <span id="hint_sector" style="margin-left: 1em;margin-right: 1em">-</span><span>Sectors</span>
@@ -87,7 +121,7 @@
     <div class="container" id="cont_sector">
         <table style="width: 100%">
             <tbody th:each="sector : ${data.getSectors()}"
-                   th:if="${sector.getOnTimeRate() > 0 || sector.getRollingOnTimeRate() > 0}">
+                   th:if="${sector.getActualTotal() > 0 }">
             <tr>
                 <th colspan="2" class="tgroup" th:text="${sector.getName()}"></th>
             </tr>
