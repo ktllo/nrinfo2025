@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.controller;
 
+import org.leolo.nrinfo.dto.response.DetailedStationSearchResult;
 import org.leolo.nrinfo.dto.response.StationSearchResult;
 import org.leolo.nrinfo.service.StationSearchService;
 import org.slf4j.Logger;
@@ -30,19 +31,26 @@ public class StationSearchController {
             @RequestParam(name="size", defaultValue = "0") int size
     ) {
         log.debug("Station search query: {} in {} mode", query, searchMode);
-        List<StationSearchResult> searchResult = null;
         if ("simple".equals(searchMode)) {
-            searchResult = stationSearchService.simpleSearch(query, size);
+            List<StationSearchResult> searchResults = null;
+            searchResults = stationSearchService.simpleSearch(query, size);
+            if (searchResults != null) {
+                return ResponseEntity.ok(Map.of("status", "success", "result", searchResults));
+            }
         } else if ("detailed".equals(searchMode)) {
-            return ResponseUtil.buildNotImplementedResponse();
+            log.debug("Detailed search is yet to be implemented");
+            List<DetailedStationSearchResult> searchResults = null;
+            searchResults = stationSearchService.detailedSearch(query, size);
+            if (searchResults != null) {
+                return ResponseEntity.ok(Map.of("status", "success", "result", searchResults));
+            }
         } else {
             // Unknown mode
             return ResponseUtil.buildFullErrorResponse("Unknown search mode","Search mode must be simple or detailed");
         }
-        if (searchResult != null) {
-            return ResponseEntity.ok(Map.of("status", "success", "result", searchResult));
-        }
-        return ResponseEntity.ok(Map.of("status", "success", "result", ""));
+        return ResponseUtil.buildBadRequestResponse();
     }
+
+
 
 }
