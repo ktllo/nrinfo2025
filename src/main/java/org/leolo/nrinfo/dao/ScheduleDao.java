@@ -16,10 +16,8 @@ import org.springframework.stereotype.Repository;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Stream;
 
 @Repository
 public class ScheduleDao extends BaseDao {
@@ -325,7 +323,7 @@ public class ScheduleDao extends BaseDao {
                                     and days_run LIKE get_date_mask(?)
                                 order by stp_indicator
                                 limit 1
-                                ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid
+                                ON DUPLICATE KEY UPDATE schedule_map.schedule_uuid = s.schedule_uuid, updated_date = now()
                                 """
                 )
         ) {
@@ -739,7 +737,24 @@ public class ScheduleDao extends BaseDao {
             params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
             params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
         }
-
+        //Operator
+        if (scheduleSearch.getTrainOperator() != null && !scheduleSearch.getTrainOperator().isEmpty()) {
+            String inClause = " in (" + String.join(",", Collections.nCopies(scheduleSearch.getTrainOperator().size(), "?")) + ") ";
+            if (scheduleSearch.isHideCancelledTrain()) {
+                //Normal case
+                sbSql.append("and s.operator ").append(inClause);
+                for (String operator : scheduleSearch.getTrainOperator()) {
+                    params.add(new SearchParameter(Types.VARCHAR, operator));
+                }
+            } else {
+                sbSql.append("and (s.operator ").append(inClause).append("or bs.operator ").append(inClause).append(") ");
+                Stream.of(scheduleSearch.getTrainOperator(), scheduleSearch.getTrainOperator()).forEach(
+                        l -> l.forEach(
+                                o -> params.add(new SearchParameter(Types.VARCHAR, o))
+                        )
+                );
+            }
+        }
 
 
         //Sort

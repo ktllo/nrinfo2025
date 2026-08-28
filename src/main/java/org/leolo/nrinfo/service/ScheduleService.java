@@ -1,6 +1,7 @@
 package org.leolo.nrinfo.service;
 
 import org.jetbrains.annotations.NotNull;
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dao.DatabaseOperationResult;
 import org.leolo.nrinfo.dao.ScheduleDao;
 import org.leolo.nrinfo.dao.TrainOperatorDao;
@@ -29,6 +30,7 @@ public class ScheduleService {
     @Autowired private ScheduleDao scheduleDao;
     @Autowired
     private TrainOperatorDao trainOperatorDao;
+    @Autowired private GenericCacheService genericCacheService;
 
     public DatabaseOperationResult processAssociationBatch(Collection<org.leolo.nrinfo.dto.external.networkrail.Association> associations) {
         DatabaseOperationResult result = new DatabaseOperationResult();
@@ -170,7 +172,13 @@ public class ScheduleService {
             //This is a special case, ZZ are known to be shared by many freight operators
             return "Freight Service";
         }
-        return trainOperatorDao.getTrainOperatorName(atocCode);
+        final String CACHE_KEY = String.format(Constants.CacheKey.OPERATOR_NAME_TEMPLATE, atocCode);
+        if (genericCacheService.hasEntry(CACHE_KEY)) {
+            return genericCacheService.getEntry(CACHE_KEY).toString();
+        }
+        String name = trainOperatorDao.getTrainOperatorName(atocCode);
+        genericCacheService.addToCache(CACHE_KEY, name, 3600_000, GenericCacheService.CacheMode.FIXED_LIFETIME, false);
+        return name;
     }
 
     public String getTimingLoad(String powerType, String timingLoad) {
@@ -317,7 +325,7 @@ public class ScheduleService {
         Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
         Duration cacheAge = Duration.between(cacheDate, Instant.now());
         if (cacheAge.compareTo(Duration.ofDays(1)) > 0) {
-            log.info("Cache is too old, rebuilding them!");
+            log.info("Cache is too old ({}), rebuilding them!", cacheAge);
             scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
         }
         return scheduleDao.searchTrainSchedule(scheduleSearch);

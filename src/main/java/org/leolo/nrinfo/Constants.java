@@ -20,6 +20,8 @@ public class Constants {
     public static class CacheKey {
         public static final String NATIONAL_SUMMARY = "perfsummary.national";
         public static final String OPERATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
+
+        public static final String OPERATOR_NAME_TEMPLATE = "operator.name.%s";
     }
 
     public static class AIPrompt {

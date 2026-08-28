@@ -13,6 +13,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.List;
 
 @Getter
 @Setter
@@ -30,6 +31,8 @@ public class ScheduleSearch {
     private String headcode;
     private boolean hideCancelledTrain = true;
     private boolean strictLocationMatch = false;
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    private List<String> trainOperator;
 
     @JsonIgnore
     public static final Logger log = LoggerFactory.getLogger(ScheduleSearch.class);
@@ -75,9 +78,15 @@ public class ScheduleSearch {
         } else if (validateMode == ValidateMode.REGULAR && duration.compareTo(Duration.ofMinutes(180)) > 0) {
             throw new ValidationException("duration cannot be greater than 180 minutes");
         }
-
         if (!fromInstant.truncatedTo(ChronoUnit.DAYS).equals(toInstant.truncatedTo(ChronoUnit.DAYS))) {
             throw new ValidationException("fromTime and toTime must be on same day");
+        }
+        if (trainOperator != null) {
+            if (validateMode == ValidateMode.PUBLIC && trainOperator.size() >= 2) {
+                throw new ValidationException("trainOperator may contain at most 2 operators");
+            } else if (trainOperator.size() >= 5) {
+                throw new ValidationException("trainOperator may contain at most 5 operators");
+            }
         }
     }
 
