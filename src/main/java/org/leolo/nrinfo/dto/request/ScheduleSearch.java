@@ -29,6 +29,7 @@ public class ScheduleSearch {
     private boolean publicTimetableOnly = false;
     private String headcode;
     private boolean hideCancelledTrain = true;
+    private boolean strictLocationMatch = false;
 
     @JsonIgnore
     public static final Logger log = LoggerFactory.getLogger(ScheduleSearch.class);

@@ -658,14 +658,18 @@ public class ScheduleDao extends BaseDao {
         StringBuilder sbSql = new StringBuilder();
         sbSql.append("select distinct s.schedule_uuid ");
         sbSql.append("from schedule s ");
-        sbSql.append("join schedule_map sm on s.schedule_uuid = sm.schedule_uuid ");
+        sbSql.append("left join schedule_map sm on s.schedule_uuid = sm.schedule_uuid ");
         if (scheduleSearch.getLocation() != null) {
-            sbSql.append("join schedule_details sd on s.schedule_uuid = sd.schedule_uuid ");
-            sbSql.append("join v_auto_tiploc_group vatg on sd.location = vatg.group_member ");
+            sbSql.append("left join schedule_details sd on s.schedule_uuid = sd.schedule_uuid ");
+            if (!scheduleSearch.isStrictLocationMatch()) {
+                sbSql.append("left join v_auto_tiploc_group vatg on sd.location = vatg.group_member ");
+            }
         }
         if (!scheduleSearch.isHideCancelledTrain()) {
-            sbSql.append("join schedule bs on s.train_uid = bs.train_uid and ? between bs.start_date and bs.end_date and " +
-                    "bs.days_run like get_date_mask(?) and bs.stp_indicator = 'P' ");
+            sbSql.append("left join schedule bs on s.train_uid = bs.train_uid and ? between bs.start_date and bs.end_date and " +
+                    "bs.days_run like get_date_mask(?) and bs.stp_indicator = 'P' and s.stp_indicator = 'C' ");
+            sbSql.append("left join schedule_details bsd on bs.schedule_uuid = bsd.schedule_uuid ");
+            sbSql.append("left join v_auto_tiploc_group vatgb on bsd.location = vatgb.group_member ");
             params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
             params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
         }
@@ -675,8 +679,23 @@ public class ScheduleDao extends BaseDao {
         params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
 
         if (scheduleSearch.getLocation() != null) {
-            sbSql.append("and vatg.given_code = ? ");
+            if (scheduleSearch.isStrictLocationMatch()) {
+                if (scheduleSearch.isHideCancelledTrain()) {
+                    sbSql.append("and sd.location = ? ");
+                } else {
+                    sbSql.append("and (sd.location = ?  or bsd.location = ?)");
+                }
+            } else {
+                if (scheduleSearch.isHideCancelledTrain()) {
+                    sbSql.append("and vatg.given_code = ? ");
+                } else {
+                    sbSql.append("and (vatg.given_code = ? or vatgb.given_code = ?) ");
+                }
+            }
             params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getLocation()));
+            if (!scheduleSearch.isHideCancelledTrain()) {
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getLocation()));
+            }
         }
         if (scheduleSearch.getHeadcode() != null) {
 
@@ -691,25 +710,34 @@ public class ScheduleDao extends BaseDao {
         }
         //Time
         if (scheduleSearch.getLocation() != null) {
+            List<String> timeFields;
             if (scheduleSearch.isPublicTimetableOnly()) {
-                sbSql.append("and COALESCE(sd.public_departure_time,  sd.public_arrival_time) BETWEEN ? AND ? ");
-                params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
-                params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+                timeFields = new ArrayList<>(List.of("public_departure_time", "public_arrival_time"));
             } else {
-                if (scheduleSearch.isCallOnly()) {
-                    sbSql.append("and COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time) BETWEEN ? AND ? ");
-                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
-                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
-                } else {
-                    sbSql.append("and COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time, sd.pass_time) BETWEEN ? AND ? ");
-                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
-                    params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+                timeFields = new ArrayList<>(List.of("public_departure_time", "departure_time", "public_arrival_time", "arrival_time"));
+                if (!scheduleSearch.isCallOnly()) {
+                    timeFields.add("pass_time");
                 }
             }
-        }
-        //Unhide cancelled trains
-        if (!scheduleSearch.isHideCancelledTrain()) {
-            //TODO: figure out how to do this
+            StringBuilder timeFilterFields = new StringBuilder();
+            timeFilterFields.append("COALESCE(");
+            boolean first = true;
+            for (String timeField : timeFields) {
+                if (!first) {
+                    timeFilterFields.append(", ");
+                }
+                first = false;
+                timeFilterFields.append("sd.").append(timeField);
+            }
+            if (!scheduleSearch.isHideCancelledTrain()) {
+                for (String timeField : timeFields) {
+                    timeFilterFields.append(", ").append("bsd.").append(timeField);
+                }
+            }
+            timeFilterFields.append(")");
+            sbSql.append("and ").append(timeFilterFields).append(" BETWEEN ? AND ? ");
+            params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
+            params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
         }
 
 

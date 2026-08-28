@@ -11,6 +11,8 @@ import java.util.Collection;
 @Setter
 public class ScheduleSearchResult {
     private TrainScheduleSummary summary;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private TrainScheduleSummary baseSchedule;
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private Collection<TrainScheduleEntry> details = new ArrayList<TrainScheduleEntry>();
 }

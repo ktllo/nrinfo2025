@@ -1,5 +1,7 @@
 package org.leolo.nrinfo.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
 import org.leolo.nrinfo.dto.response.ScheduleSearchResult;
 import org.leolo.nrinfo.dto.response.TrainSchedule;
@@ -259,7 +261,9 @@ public class ScheduleController {
                             parsedDate
                     );
                     association.setOtherTrain(fillSummary(scheduleService.getScheduleByUUID(assocUUID), parsedDate));
-                    entry.setAssociation(association);
+                    if (entry != null) {
+                        entry.setAssociation(association);
+                    }
                 }
             }
             trainSchedule.getLocations().add(entry);
@@ -337,11 +341,25 @@ public class ScheduleController {
             for (UUID uuid: trainUuids) {
                 ScheduleSearchResult result = new ScheduleSearchResult();
                 Schedule schedule = scheduleService.getScheduleByUUID(uuid);
+                Schedule baseSchedule = null;
                 result.setSummary(fillSummary(schedule, searchParameter.getFromTime()));
-                if (searchParameter.getLocation()!=null) {
+                result.getSummary().setStpIndicator(schedule.getStpIndicator());
+                if ("C".equalsIgnoreCase(schedule.getStpIndicator())) {
+                    //This is a cancellation, we want to include the base schedule
+                    baseSchedule = scheduleService.getScheduleByUUID(scheduleService.getBaseScheduleUUID(schedule.getTrainUid(),searchParameter.getFromTime()));
+                    result.setBaseSchedule(fillSummary(baseSchedule, searchParameter.getFromTime()));
+                }
+                if (searchParameter.getLocation() != null) {
                     for (ScheduleDetail scheduleDetail : schedule.getDetailList()) {
                         if (locationGroupMember.contains(scheduleDetail.getLocation())) {
                             result.getDetails().add(fillEntryInfo(scheduleDetail));
+                        }
+                    }
+                    if (baseSchedule != null) {
+                        for (ScheduleDetail scheduleDetail : baseSchedule.getDetailList()) {
+                            if (locationGroupMember.contains(scheduleDetail.getLocation())) {
+                                result.getDetails().add(fillEntryInfo(scheduleDetail));
+                            }
                         }
                     }
                 }

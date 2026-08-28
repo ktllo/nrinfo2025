@@ -15,4 +15,22 @@ public class TrainScheduleSummary {
     private String arrivalTime;
     private String trainType;
     private String trainOperator;
+    private String stpIndicator;
+
+    public String getStpIndicator() {
+        if (stpIndicator == null) {
+            return null;
+        }
+        switch (stpIndicator) {
+            case "P":
+            case "N":
+                return "Base Schedule";
+            case "O":
+                return "Overlay";
+            case "C":
+                return "Cancellation";
+            default:
+                return stpIndicator;
+        }
+    }
 }
