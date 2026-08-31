@@ -34,6 +34,9 @@ public class ScheduleSearch {
     @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
     private List<String> trainOperator;
 
+    private String previousVia;
+    private String willGoVia;
+
     @JsonIgnore
     public static final Logger log = LoggerFactory.getLogger(ScheduleSearch.class);
 
@@ -53,6 +56,12 @@ public class ScheduleSearch {
             Instant instant = fromTime.toInstant();
             //Move the toTime to be 1h ahead of the fromTime, which defaults to current time
             toTime = Date.from(instant.plus(60, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.MINUTES));
+        }
+        if (previousVia!=null && previousVia.isEmpty()) {
+            previousVia = null;
+        }
+        if (willGoVia!=null && willGoVia.isEmpty()) {
+            willGoVia = null;
         }
     }
 
@@ -87,6 +96,14 @@ public class ScheduleSearch {
             } else if (trainOperator.size() >= 5) {
                 throw new ValidationException("trainOperator may contain at most 5 operators");
             }
+        }
+        if (
+                validateMode == ValidateMode.PUBLIC && previousVia!= null && willGoVia!=null
+        ) {
+            throw new ValidationException("You can only specify one of previousVia, willGoVia");
+        }
+        if (location==null && (previousVia!=null || willGoVia!=null)) {
+            throw new ValidationException("location is required when previousVia or willGoVia is specified");
         }
     }
 

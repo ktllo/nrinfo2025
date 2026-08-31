@@ -334,9 +334,21 @@ public class ScheduleController {
         List<ScheduleSearchResult> searchResult = new ArrayList<>();
         HashSet<String> locationGroupMember = new HashSet<>();
         locationGroupMember.add(searchParameter.getLocation());
+        if (searchParameter.getPreviousVia() != null) {
+            locationGroupMember.add(searchParameter.getPreviousVia());
+        }
+        if (searchParameter.getWillGoVia() != null) {
+            locationGroupMember.add(searchParameter.getWillGoVia());
+        }
         log.debug("Search parameter: {}", searchParameter);
         try {
             locationGroupMember.addAll(tiplocService.getGroupMembers(searchParameter.getLocation()));
+            if (searchParameter.getPreviousVia() != null) {
+                locationGroupMember.addAll(tiplocService.getGroupMembers(searchParameter.getPreviousVia()));
+            }
+            if (searchParameter.getWillGoVia() != null) {
+                locationGroupMember.addAll(tiplocService.getGroupMembers(searchParameter.getWillGoVia()));
+            }
             List<UUID> trainUuids = scheduleService.searchTrainSchedule(searchParameter);
             for (UUID uuid: trainUuids) {
                 ScheduleSearchResult result = new ScheduleSearchResult();

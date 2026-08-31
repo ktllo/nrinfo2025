@@ -17,6 +17,7 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Repository
@@ -652,6 +653,26 @@ public class ScheduleDao extends BaseDao {
         List<UUID> list = new ArrayList<>();
 
         List<SearchParameter> params = new ArrayList<>();
+        //Shared part
+        List<String> timeFields;
+        if (scheduleSearch.isPublicTimetableOnly()) {
+            timeFields = new ArrayList<>(List.of("public_departure_time", "public_arrival_time"));
+        } else {
+            timeFields = new ArrayList<>(List.of("public_departure_time", "departure_time", "public_arrival_time", "arrival_time"));
+            if (!scheduleSearch.isCallOnly()) {
+                timeFields.add("pass_time");
+            }
+        }
+        StringBuilder timeFilterFields = new StringBuilder();
+        timeFilterFields.append("COALESCE(");
+        if (scheduleSearch.isHideCancelledTrain()) {
+            timeFilterFields.append(timeFields.stream().map(tf -> "sd."+ tf).collect(Collectors.joining(",")));
+        } else {
+            timeFilterFields.append(timeFields.stream().map(tf -> "sd."+ tf).collect(Collectors.joining(",")));
+            timeFilterFields.append(",");
+            timeFilterFields.append(timeFields.stream().map(tf -> "bsd."+ tf).collect(Collectors.joining(",")));
+        }
+        timeFilterFields.append(") ");
         //Build the SQL
         StringBuilder sbSql = new StringBuilder();
         sbSql.append("select distinct s.schedule_uuid ");
@@ -662,12 +683,40 @@ public class ScheduleDao extends BaseDao {
             if (!scheduleSearch.isStrictLocationMatch()) {
                 sbSql.append("left join v_auto_tiploc_group vatg on sd.location = vatg.group_member ");
             }
+            if (scheduleSearch.getPreviousVia() != null) {
+                sbSql.append("join schedule_details sdp on s.schedule_uuid = sdp.schedule_uuid and sd.entry_seq > sdp.entry_seq ");
+                if (!scheduleSearch.isStrictLocationMatch()) {
+                    sbSql.append("left join v_auto_tiploc_group vatgp on sdp.location = vatgp.group_member ");
+                }
+            }
+            if (scheduleSearch.getWillGoVia() != null) {
+                sbSql.append("join schedule_details sdn on s.schedule_uuid = sdn.schedule_uuid and sd.entry_seq < sdn.entry_seq ");
+                if (!scheduleSearch.isStrictLocationMatch()) {
+                    sbSql.append("left join v_auto_tiploc_group vatgn on sdn.location = vatgn.group_member ");
+                }
+            }
         }
         if (!scheduleSearch.isHideCancelledTrain()) {
             sbSql.append("left join schedule bs on s.train_uid = bs.train_uid and ? between bs.start_date and bs.end_date and " +
                     "bs.days_run like get_date_mask(?) and bs.stp_indicator = 'P' and s.stp_indicator = 'C' ");
-            sbSql.append("left join schedule_details bsd on bs.schedule_uuid = bsd.schedule_uuid ");
-            sbSql.append("left join v_auto_tiploc_group vatgb on bsd.location = vatgb.group_member ");
+            if (scheduleSearch.getLocation() != null) {
+                sbSql.append("left join schedule_details bsd on bs.schedule_uuid = bsd.schedule_uuid ");
+                if (!scheduleSearch.isStrictLocationMatch()) {
+                    sbSql.append("left join v_auto_tiploc_group bvatg on bsd.location = bvatg.group_member ");
+                }
+                if (scheduleSearch.getPreviousVia() != null) {
+                    sbSql.append("left join schedule_details bsdp on bs.schedule_uuid = bsdp.schedule_uuid and bsd.entry_seq > bsdp.entry_seq ");
+                    if (!scheduleSearch.isStrictLocationMatch()) {
+                        sbSql.append("left join v_auto_tiploc_group bvatgp on bsdp.location = bvatgp.group_member ");
+                    }
+                }
+                if (scheduleSearch.getWillGoVia() != null) {
+                    sbSql.append("left join schedule_details bsdn on bs.schedule_uuid = bsdn.schedule_uuid and bsd.entry_seq < bsdn.entry_seq ");
+                    if (!scheduleSearch.isStrictLocationMatch()) {
+                        sbSql.append("left join v_auto_tiploc_group bvatgn on bsdn.location = bvatgn.group_member ");
+                    }
+                }
+            }
             params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
             params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
         }
@@ -681,22 +730,61 @@ public class ScheduleDao extends BaseDao {
                 if (scheduleSearch.isHideCancelledTrain()) {
                     sbSql.append("and sd.location = ? ");
                 } else {
-                    sbSql.append("and (sd.location = ?  or bsd.location = ?)");
+                    sbSql.append("and (sd.location = ?  or bsd.location = ?) ");
                 }
             } else {
                 if (scheduleSearch.isHideCancelledTrain()) {
                     sbSql.append("and vatg.given_code = ? ");
                 } else {
-                    sbSql.append("and (vatg.given_code = ? or vatgb.given_code = ?) ");
+                    sbSql.append("and (vatg.given_code = ? or bvatg.given_code = ?) ");
                 }
             }
             params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getLocation()));
             if (!scheduleSearch.isHideCancelledTrain()) {
                 params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getLocation()));
             }
+            //Previous/Will go vias
+            if (scheduleSearch.getPreviousVia() != null) {
+                if (scheduleSearch.isStrictLocationMatch()) {
+                    if (scheduleSearch.isHideCancelledTrain()) {
+                        sbSql.append("and sdp.location = ? ");
+                    } else {
+                        sbSql.append("and (sdp.location = ? or bsdp.location = ?) ");
+                    }
+                } else {
+                    if (scheduleSearch.isHideCancelledTrain()) {
+                        sbSql.append("and vatgp.given_code = ? ");
+                    } else {
+                        sbSql.append("and (vatgp.given_code = ? or bvatgp.given_code = ?) ");
+                    }
+                }
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getPreviousVia()));
+                if (!scheduleSearch.isHideCancelledTrain()) {
+                    params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getPreviousVia()));
+                }
+            }
+            if (scheduleSearch.getWillGoVia() != null) {
+                if (scheduleSearch.isStrictLocationMatch()) {
+                    if (scheduleSearch.isHideCancelledTrain()) {
+                        sbSql.append("and sdn.location = ? ");
+                    } else {
+                        sbSql.append("and (sdn.location = ? or bsdn.location = ?) ");
+                    }
+                } else {
+
+                    if (scheduleSearch.isHideCancelledTrain()) {
+                        sbSql.append("and vatgn.given_code = ? ");
+                    } else {
+                        sbSql.append("and (vatgn.given_code = ? or bvatgn.given_code = ?) ");
+                    }
+                }
+                params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getWillGoVia()));
+                if (!scheduleSearch.isHideCancelledTrain()) {
+                    params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getWillGoVia()));
+                }
+            }
         }
         if (scheduleSearch.getHeadcode() != null) {
-
             if (!scheduleSearch.isHideCancelledTrain()) {
                 sbSql.append("and (s.signal_headcode = ? or bs.signal_headcode = ?) ");
                 params.add(new SearchParameter(Types.VARCHAR, scheduleSearch.getHeadcode()));
@@ -708,31 +796,7 @@ public class ScheduleDao extends BaseDao {
         }
         //Time
         if (scheduleSearch.getLocation() != null) {
-            List<String> timeFields;
-            if (scheduleSearch.isPublicTimetableOnly()) {
-                timeFields = new ArrayList<>(List.of("public_departure_time", "public_arrival_time"));
-            } else {
-                timeFields = new ArrayList<>(List.of("public_departure_time", "departure_time", "public_arrival_time", "arrival_time"));
-                if (!scheduleSearch.isCallOnly()) {
-                    timeFields.add("pass_time");
-                }
-            }
-            StringBuilder timeFilterFields = new StringBuilder();
-            timeFilterFields.append("COALESCE(");
-            boolean first = true;
-            for (String timeField : timeFields) {
-                if (!first) {
-                    timeFilterFields.append(", ");
-                }
-                first = false;
-                timeFilterFields.append("sd.").append(timeField);
-            }
-            if (!scheduleSearch.isHideCancelledTrain()) {
-                for (String timeField : timeFields) {
-                    timeFilterFields.append(", ").append("bsd.").append(timeField);
-                }
-            }
-            timeFilterFields.append(")");
+
             sbSql.append("and ").append(timeFilterFields).append(" BETWEEN ? AND ? ");
             params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
             params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
@@ -759,22 +823,14 @@ public class ScheduleDao extends BaseDao {
 
         //Sort
         if (scheduleSearch.getLocation() != null) {
-            if (scheduleSearch.isPublicTimetableOnly()) {
-                sbSql.append("ORDER BY COALESCE(sd.public_departure_time,  sd.public_arrival_time) ");
-            } else {
-                if (scheduleSearch.isCallOnly()) {
-                    sbSql.append("ORDER BY COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time)");
-                } else {
-                    sbSql.append("ORDER BY COALESCE(sd.public_departure_time, sd.departure_time, sd.public_arrival_time, sd.arrival_time, sd.pass_time)");
-                }
-            }
+            sbSql.append("ORDER BY ").append(timeFilterFields);
         } else {
             sbSql.append("ORDER BY s.departure_time ");
         }
 
 
         if (scheduleSearch.getPageSize() != 0) {
-            sbSql.append("LIMIT ?");
+            sbSql.append("LIMIT ? ");
             params.add(new SearchParameter(Types.INTEGER, scheduleSearch.getPageSize()));
         }
 
