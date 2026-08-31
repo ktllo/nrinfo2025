@@ -6,6 +6,8 @@
                 src="https://code.jquery.com/jquery-3.7.1.js"
                 integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4="
                 crossorigin="anonymous"></script>
+        <script th:fragment="jqueryUI" src="/lib/jquery-ui-1.14.2/jquery-ui.js"></script>
+        <link rel="stylesheet" th:fragment="jqueryUI" href="/lib/jquery-ui-1.14.2/jquery-ui.css"/>
     </head>
     <body>
         <header th:fragment="header">
@@ -15,6 +17,9 @@
             </div>
             <div class="banner header" th:unless="${authStatus=='Y'}">
                 <a href="/login">Login</a>
+            </div>
+            <div class="banner header" th:unless="${requestUri=='/'}">
+                <a href="/">Back to main page</a>
             </div>
             <div id="generic_popup_div" class="message" th:if="${generic_popup_message}">
                 <div style="text-align: right" onclick="$('#generic_popup_div').fadeOut(function(){$('#generic_popup_div').remove();});">

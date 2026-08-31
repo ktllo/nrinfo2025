@@ -72,4 +72,13 @@ public class APIAuthenticationService {
         }
         return username;
     }
+
+    public void setWebAuthenticationService(WebAuthenticationService webAuthenticationService) {
+        authenticated = webAuthenticationService.isAuthenticated();
+        if (authenticated) {
+            userPermissionService.setUserId(userId);
+            userId = webAuthenticationService.getUserId();
+
+        }
+    }
 }

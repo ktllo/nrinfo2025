@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title th:text="${title}"></title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script th:replace="~{fragments/basic.html :: jqueryUI}"></script>
+    <script language="JavaScript" src="lib/moment.js"></script>
+    <script src="/scripts/main.js"></script>
+    <script language="javascript">
+        //Initialize the input
+        $(document).ready(function() {
+           $("#location").autocomplete({
+               minLength: 3,
+               source: function(request, response) {
+                   var inputTerm = request.term;
+                   $.ajax({
+                       url: "/api/stations/search?q="+inputTerm,
+                       method: "GET",
+                       success: function(data) {
+                           //We get the data
+                           console.log(data);
+                           var resp = [];
+                           for (const station of data.result) {
+                               resp.push(station);
+                           }
+                           console.log(resp);
+                           response(resp);
+                       },
+                       error: function(data) {
+                           response([]);
+                       }
+                   });
+               },
+               select: function(event, ui) {
+                   console.log("selected item");
+                   console.log(ui.item);
+                   $('#selected_location').val(ui.item.tiplocCode);
+                   $('#location').val(ui.item.name);
+                   return false;
+               }
+           }).autocomplete("instance")._renderItem = function(q, data) {
+               console.log("rendering >> "+data);
+               return $("<li>").append(
+                   "<span style='width: 85%;left:0;'>"+data.name+"</span>"+
+                   "<span style='width: 15%;right: 0;font-size: smaller; text-align: right'>"+data.crsCode+"</span>"
+               ).appendTo(q);
+           }
+           $('#train_date').datepicker({
+              dateFormat: "yy-mm-dd",
+              autoclose: true,
+              todayBtn: true,
+              todayHighlight: true,
+              minDate: -14
+           });
+        });
+        function doSearch() {
+            console.log("doing search");
+            var location = $('#selected_location').val().trim();
+            var date = $('#train_date').val();
+            var time = $('#train_time').val();
+            var hasDate = false;
+            var strDate = "";
+            console.log("Location: " + location + "; date: " + date + ";time: " + time +";");
+            if (location.length === 0) {
+                $('#location_message').text("Please select a location").show();
+                return false;
+            } else {
+                $('#location_message').hide();
+            }
+            if (date.length !== 0) {
+                hasDate = true;
+            } else if (time.length === 0) {
+                $('#time_message').text("Date must be specified if time is specified").show();
+                return false;
+            } else {
+                $('#time_message').hide();
+            }
+            if (hasDate) {
+                strDate = date + " ";
+                if (time.length === 0) {
+                    //No time given, we just fill in current time
+                    strDate += moment().format("HH:mm:ss");
+                    console.log(strDate);
+                } else if (time.length === 4) {
+                    //Try to fill in the time
+                    //TODO: Replace the following code to parse the given time
+                    $('#time_message').text("Parsing time not supported yet. Current time will be used").show();
+                    strDate += moment().format("HH:mm:ss");
+                    console.log(strDate);
+                } else {
+                    $('#time_message').text("Time must be in HHmm format.").show();
+                }
+            }
+            var request = {
+                "location": location
+            };
+            if (hasDate) {
+                request["fromTime"] = strDate;
+            }
+            console.log(request);
+            $('#search_in_progress').show();
+            $.ajax({
+                url: "/api/schedule/search",
+                method: "POST",
+                data: JSON.stringify(request),
+                contentType: "application/json",
+                success: function(data) {
+                    console.log(data);
+                    if (data.result !== "success") {
+                        $('#search_in_progress').hide();
+                        $('#search_message').text("Error when searching for schedule. Try again later.").show();
+                        return;
+                    }
+                    var display = $('<div>');
+                    for (const schedule of data.schedules) {
+                        var entry = $('<div>');
+                        entry.append("<span>"+schedule.summary.origin+"</span>");
+                        entry.append("\u25B6");
+                        entry.append("<span>"+$('#location').val()+"</span>");
+                        entry.append("\u25B6");
+                        entry.append("<span>"+schedule.summary.destination+"</span>");
+                        entry.appendTo(display);
+                    }
+                    display.appendTo($('#search_result').empty().show());
+                    $('#search_in_progress').hide();
+                },
+                error: function(data) {
+                    console.log(data);
+                    $('#search_in_progress').hide();
+                    $('#search_message').text("Error when searching for schedule. Try again later.").show();
+                }
+            });
+        }
+    </script>
+    <style>
+        #search_input th {
+            min-width: 150px;
+            padding-right: 2em;
+        }
+    </style>
+</head>
+<body>
+<h1 th:text="${title}"></h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
+<div id="search_input">
+    <table>
+        <tr>
+            <th><label for="location">Location</label> </th>
+            <td>
+                <input name="location" type="text" id="location">
+                <input name="selectedLocation" type="hidden" id="selected_location" value="">
+            </td>
+            <td>
+                <span id="location_message" style="display: none;"></span>
+            </td>
+        </tr>
+        <tr>
+            <th><label for="train_date">Date</label> </th>
+            <td><input name="date" type="text" id="train_date"> </td>
+        </tr>
+        <tr>
+            <th><label for="train_time">Time</label> </th>
+            <td><input name="time" type="text" id="train_time"></td>
+            <td><span id="time_message" class="error" style="display: none;"></span></td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <button name="search" type="submit" id="search" onclick="doSearch()">Search</button>
+            </td>
+        </tr>
+    </table>
+</div>
+<div id="search_in_progress" style="display: none;">
+    Searching, please wait...
+</div>
+<div id="search_message" style="display: none;" class="error">
+</div>
+<div id="search_result" style="display: none;">
+</div>
+<div th:replace="~{fragments/basic.html :: footer}"></div>
+</body>
+</html>

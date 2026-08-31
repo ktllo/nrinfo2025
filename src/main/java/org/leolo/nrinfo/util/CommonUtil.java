@@ -40,4 +40,21 @@ public class CommonUtil {
         }
         return UUIDGenerators.generate();
     }
+
+    public static String toCamelCase(String s) {
+        if (s == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        boolean capitalize = true;
+        for (char ch: s.toCharArray()) {
+            if (capitalize) {
+                sb.append(Character.toUpperCase(ch));
+            } else {
+                sb.append(Character.toLowerCase(ch));
+            }
+            capitalize = Character.isSpaceChar(ch);
+        }
+        return sb.toString();
+    }
 }

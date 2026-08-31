@@ -46,7 +46,6 @@ public class WebAuthInterceptor implements HandlerInterceptor {
      */
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        log.info("WebAuthInterceptor.preHandle called for {}", request.getRequestURI());
         webAuthenticationService.loadSession(request.getSession());
         return HandlerInterceptor.super.preHandle(request, response, handler);
     }
@@ -84,6 +83,7 @@ public class WebAuthInterceptor implements HandlerInterceptor {
             }
             modelAndView.getModel().put("genTime", Instant.now());
             modelAndView.getModel().put("authStatus", webAuthenticationService.isAuthenticated()?"Y":"N");
+            modelAndView.getModel().put("requestUri", request.getRequestURI());
         }
     }
 
@@ -112,7 +112,7 @@ public class WebAuthInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         if (ex != null) {
-            log.error("Error when processing request = {}", ex.getMessage(), ex);
+            log.error("Error when processing request [{}]= {}",request.getRequestURI(), ex.getMessage(), ex);
         }
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }

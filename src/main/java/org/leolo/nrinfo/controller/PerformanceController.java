@@ -5,10 +5,7 @@ import org.leolo.nrinfo.exception.ResourceNotFoundException;
 import org.leolo.nrinfo.model.PendingData;
 import org.leolo.nrinfo.model.RealTimePerformanceSnapshot;
 import org.leolo.nrinfo.model.ai.CompletionResult;
-import org.leolo.nrinfo.service.AIGenerationService;
-import org.leolo.nrinfo.service.GenericCacheService;
-import org.leolo.nrinfo.service.PermissionService;
-import org.leolo.nrinfo.service.RealTimePerformanceService;
+import org.leolo.nrinfo.service.*;
 import org.leolo.nrinfo.util.MarkdownUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +37,8 @@ public class PerformanceController {
     private AIGenerationService aiGenerationService;
     @Autowired
     private GenericCacheService genericCacheService;
+    @Autowired
+    private APIAuthenticationService authenticationService;
 
     private final Object LOCK = new Object();
 
@@ -103,6 +102,11 @@ public class PerformanceController {
     public ResponseEntity getOperatorPerformanceSummary(@PathVariable String id) {
         if (id == null || id.isEmpty()) {
             return ResponseUtil.buildBadRequestResponse();
+        }
+        if (authenticationService.isAuthenticated()) {
+            log.debug("Requested by {}", authenticationService.getUsername());
+        } else {
+            log.info("Requested by anonymous user");
         }
         RealTimePerformanceSnapshot snapshot = realTimePerformanceService.getSnapshot();
         if (snapshot == null) {

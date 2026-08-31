@@ -1,8 +1,10 @@
 package org.leolo.nrinfo.service;
 
 import jakarta.servlet.http.HttpSession;
+import lombok.Getter;
 import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dao.UserDao;
+import org.leolo.nrinfo.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,9 +23,14 @@ public class WebAuthenticationService {
     private static Logger log = LoggerFactory.getLogger(WebAuthenticationService.class);
 
 
+    @Getter
     private int userId;
 
+    @Getter
     private String username = null;
+    private boolean sessionLoaded = false;
+    @Autowired
+    private UserService userService;
 
     public void loadSession(HttpSession session) {
         if (session == null) {
@@ -33,10 +40,21 @@ public class WebAuthenticationService {
         if (objUserId instanceof Integer) {
             userId = (Integer) objUserId;
         }
+        if (userId != -1) {
+            User user = userService.getUserById(userId);
+            if (user != null) {
+                username = user.getUsername();
+            }
+        }
+        sessionLoaded = true;
     }
 
     public boolean isAuthenticated() {
         return userId != 0;
+    }
+
+    public boolean isReady() {
+        return !sessionLoaded;
     }
 
 }
