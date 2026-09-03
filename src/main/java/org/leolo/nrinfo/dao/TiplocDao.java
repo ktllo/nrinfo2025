@@ -2,6 +2,7 @@ package org.leolo.nrinfo.dao;
 
 import org.leolo.nrinfo.dto.response.StationSearchResult;
 import org.leolo.nrinfo.model.Tiploc;
+import org.leolo.nrinfo.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,10 +13,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 @Repository
 public class TiplocDao extends BaseDao{
@@ -371,6 +369,66 @@ public class TiplocDao extends BaseDao{
             }
         }
         return groupMembers;
+    }
+
+    public List<String> getDisplayNameByTiplocCode(String tiplocCode) throws SQLException {
+        try (Connection connection = ds.getConnection()) {
+            //Check is there one set manually
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "SELECT display_name from manual_station_display_name where tiploc_code = ?"
+            )) {
+                ps.setString(1, tiplocCode);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return List.of(rs.getString(1));
+                    }
+                }
+            }
+            //Check is there one set manually in same auto group
+            try (PreparedStatement ps = connection.prepareStatement(
+                    """
+                        SELECT
+                            display_name 
+                        from 
+                            v_auto_tiploc_group vatg 
+                            join manual_station_display_name msdn on vatg.group_member = msdn.tiploc_code
+                        where
+                            vatg.given_code = ?
+                        order by 
+                            length(display_name)
+                        """
+            )) {
+                ps.setString(1, tiplocCode);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        return List.of(rs.getString(1));
+                    }
+                }
+            }
+            //Find the one in the group with shortest name
+            try (PreparedStatement ps = connection.prepareStatement(
+                    """
+                        SELECT
+                            tps_description
+                        FROM
+                            v_auto_tiploc_group vatg 
+                            join tiploc t on vatg.group_member = t.tiploc_code
+                        where
+                            vatg.given_code = ?
+                        order by
+                            length(tps_description)
+                        """
+            )) {
+                ps.setString(1, tiplocCode);
+                try (ResultSet rs = ps.executeQuery()) {
+                    List<String> displayNames = new ArrayList<>();
+                    while (rs.next()) {
+                        displayNames.add(CommonUtil.toCamelCase(rs.getString(1)));
+                    }
+                    return displayNames;
+                }
+            }
+        }
     }
 
 }

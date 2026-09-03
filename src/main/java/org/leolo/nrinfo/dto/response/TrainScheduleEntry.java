@@ -10,6 +10,7 @@ import lombok.Setter;
 public class TrainScheduleEntry {
     private String tiplocCode;
     private String locationName;
+    private String displayName;
     private String crsCode;
 
     //WTT

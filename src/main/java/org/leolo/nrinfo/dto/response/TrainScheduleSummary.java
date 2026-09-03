@@ -11,6 +11,8 @@ public class TrainScheduleSummary {
     private String trainUid;
     private String origin;
     private String destination;
+    private String originDisplayName;
+    private String destinationDisplayName;
     private String departureTime;
     private String arrivalTime;
     private String trainType;
@@ -21,16 +23,11 @@ public class TrainScheduleSummary {
         if (stpIndicator == null) {
             return null;
         }
-        switch (stpIndicator) {
-            case "P":
-            case "N":
-                return "Base Schedule";
-            case "O":
-                return "Overlay";
-            case "C":
-                return "Cancellation";
-            default:
-                return stpIndicator;
-        }
+        return switch (stpIndicator) {
+            case "P", "N" -> "Base Schedule";
+            case "O" -> "Overlay";
+            case "C" -> "Cancellation";
+            default -> stpIndicator;
+        };
     }
 }

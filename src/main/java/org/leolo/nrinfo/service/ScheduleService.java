@@ -7,6 +7,8 @@ import org.leolo.nrinfo.dao.ScheduleDao;
 import org.leolo.nrinfo.dao.TrainOperatorDao;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
+import org.leolo.nrinfo.dto.response.ScheduleSearchResult;
+import org.leolo.nrinfo.dto.response.TrainSchedule;
 import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.enums.PowerType;
 import org.leolo.nrinfo.model.ScheduleAssociation;
@@ -321,6 +323,15 @@ public class ScheduleService {
         return targetInstance == numericDbInstance;
     }
 
+    /**
+     * Search train schedules that matches the search parameters
+     * 
+     * @param scheduleSearch search parameters
+     * @return A list of train UUIDs that matches the search parameters
+     * @throws SQLException When there are error searching trains
+     * @deprecated Please use {@link #searchTrainScheduleForScheduleSearchResult(ScheduleSearch)}
+     */
+    @Deprecated
     public List<UUID> searchTrainSchedule(ScheduleSearch scheduleSearch) throws SQLException {
         Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
         Duration cacheAge = Duration.between(cacheDate, Instant.now());
@@ -329,5 +340,25 @@ public class ScheduleService {
             scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
         }
         return scheduleDao.searchTrainSchedule(scheduleSearch);
+    }
+    
+    //This is an enhanced version of the deprecated searchTrainSchedule(ScheduleSearch)
+    public List<ScheduleSearchResult> searchTrainScheduleForScheduleSearchResult(ScheduleSearch scheduleSearch) throws SQLException {
+        Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
+        Duration cacheAge = Duration.between(cacheDate, Instant.now());
+        //We should rebuild cache daily, we check add 10 minutes to the rebuild check to avoid rebuilding them multiple times
+        if (cacheAge.compareTo(Duration.ofDays(1).plus(10, ChronoUnit.MINUTES)) > 0) {
+            log.info("Cache is too old ({}), rebuilding them!", cacheAge);
+            scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
+        }
+        //Get a list of matching UUIDs first
+        List<UUID> matchingScheduleUUIDs = scheduleDao.searchTrainSchedule(scheduleSearch);
+        List<ScheduleSearchResult> searchResult = new ArrayList<>();
+        //Round 1: get the matching schedule
+        for (UUID uuid: matchingScheduleUUIDs) {
+            org.leolo.nrinfo.model.Schedule ts = getScheduleByUUID(uuid);
+        }
+        return null;
+        
     }
 }

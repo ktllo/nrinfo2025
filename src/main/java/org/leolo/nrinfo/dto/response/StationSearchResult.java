@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.leolo.nrinfo.util.CommonUtil;
 
 import java.util.ArrayList;
 
@@ -21,5 +22,9 @@ public class StationSearchResult {
         this.name = name;
         this.tiplocCode = tiplocCode;
         this.crsCode = crsCode;
+    }
+
+    public String getDisplayName(){
+        return CommonUtil.toCamelCase(name);
     }
 }

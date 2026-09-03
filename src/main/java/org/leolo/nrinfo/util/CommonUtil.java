@@ -53,7 +53,10 @@ public class CommonUtil {
             } else {
                 sb.append(Character.toLowerCase(ch));
             }
-            capitalize = Character.isSpaceChar(ch);
+            capitalize = switch (ch) {
+                case '(', ')', '.', '&' -> true;
+                default -> Character.isWhitespace(ch);
+            };
         }
         return sb.toString();
     }

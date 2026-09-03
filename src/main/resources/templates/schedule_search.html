@@ -20,13 +20,10 @@
                        url: "/api/stations/search?q="+inputTerm,
                        method: "GET",
                        success: function(data) {
-                           //We get the data
-                           console.log(data);
                            var resp = [];
                            for (const station of data.result) {
                                resp.push(station);
                            }
-                           console.log(resp);
                            response(resp);
                        },
                        error: function(data) {
@@ -35,18 +32,15 @@
                    });
                },
                select: function(event, ui) {
-                   console.log("selected item");
-                   console.log(ui.item);
                    $('#selected_location').val(ui.item.tiplocCode);
-                   $('#location').val(ui.item.name);
+                   $('#location').val(ui.item.displayName);
                    return false;
                }
            }).autocomplete("instance")._renderItem = function(q, data) {
-               console.log("rendering >> "+data);
                return $("<li>").append(
-                   "<span style='width: 85%;left:0;'>"+data.name+"</span>"+
-                   "<span style='width: 15%;right: 0;font-size: smaller; text-align: right'>"+data.crsCode+"</span>"
-               ).appendTo(q);
+                   "<span style='float: left;'>"+data.displayName+"</span>"+
+                   "<span style='font-size: smaller; text-align: right;float: inline-end;'>"+data.crsCode+"</span>"
+               ).append("</li>").appendTo(q);
            }
            $('#train_date').datepicker({
               dateFormat: "yy-mm-dd",
@@ -70,9 +64,10 @@
             } else {
                 $('#location_message').hide();
             }
+            console.log({"datelength": date.length, "timelength": time.length});
             if (date.length !== 0) {
                 hasDate = true;
-            } else if (time.length === 0) {
+            } else if (time.length !== 0) {
                 $('#time_message').text("Date must be specified if time is specified").show();
                 return false;
             } else {
@@ -83,15 +78,11 @@
                 if (time.length === 0) {
                     //No time given, we just fill in current time
                     strDate += moment().format("HH:mm:ss");
-                    console.log(strDate);
-                } else if (time.length === 4) {
-                    //Try to fill in the time
-                    //TODO: Replace the following code to parse the given time
-                    $('#time_message').text("Parsing time not supported yet. Current time will be used").show();
-                    strDate += moment().format("HH:mm:ss");
-                    console.log(strDate);
+                } else if (time.length === 5) {
+                    strDate += time + ":00";
                 } else {
                     $('#time_message').text("Time must be in HHmm format.").show();
+                    return false;
                 }
             }
             var request = {
@@ -99,6 +90,9 @@
             };
             if (hasDate) {
                 request["fromTime"] = strDate;
+            }
+            if ($("#call_only").is(":checked")) {
+                request["callOnly"] = true;
             }
             console.log(request);
             $('#search_in_progress').show();
@@ -114,14 +108,67 @@
                         $('#search_message').text("Error when searching for schedule. Try again later.").show();
                         return;
                     }
+                    const searchedLocation = data.searched_locations;
                     var display = $('<div>');
                     for (const schedule of data.schedules) {
-                        var entry = $('<div>');
-                        entry.append("<span>"+schedule.summary.origin+"</span>");
-                        entry.append("\u25B6");
-                        entry.append("<span>"+$('#location').val()+"</span>");
-                        entry.append("\u25B6");
-                        entry.append("<span>"+schedule.summary.destination+"</span>");
+                        var entry = $('<div style="border: 1px solid black;font-size: large; display: flow-root;">');
+                        var baseInfo = $('<div style=" display: flow-root;">');
+                        if (!searchedLocation.includes(schedule.summary.origin)) {
+                            var oridisp = $("<div class='station_box'>");
+                            oridisp.append("<div style='text-align: center; font-size: larger'>"+schedule.summary.originDisplayName+"</div>");
+                            oridisp.append("<div class='origin_time'>"+schedule.summary.departureTime.substring(0,5)+"</div>");
+                            oridisp.appendTo(baseInfo);
+                            baseInfo.append("<div class='station_arrow'>\u25B6</div>");
+                        } else {
+                            //Train originates from here
+                            baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
+                            baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
+                        }
+                        var curdisp = $("<div class='station_box'>");
+                        if (schedule.details.length === 1) {
+                            var arrTime = schedule.details[0].gbttArrivalTime;
+                            if (arrTime) {
+                                curdisp.append("<div class='stn_time before'>" + arrTime.substring(0, 5) + "</div>");
+                            }
+                        }
+                        curdisp.append("<div style='text-align: center; font-size: larger'>"+$('#location').val()+"</div>");
+                        if (schedule.details.length === 1) {
+                            const detail = schedule.details[0];
+                            var curdetail = $("<div>");
+                            if (arrTime) {
+                                curdisp.append("<div class='stn_time after'>"+arrTime.substring(0,5)+"</div>");
+                            } else {
+                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                            }
+                            if (detail.platform) {
+                                curdisp.append("<div  class='stn_time' style='font-size: small'>Platform <span style='font-weight: bold; font-size: larger;'>"+detail.platform+"</span></div>");
+                            } else {
+                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                            }
+                            var depTime = detail.gbttDepartureTime;
+                            if (depTime) {
+                                curdisp.append("<div class='stn_time'>"+depTime.substring(0,5)+"</div>");
+                            } else {
+                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                            }
+                        }
+                        curdisp.appendTo(baseInfo);
+                        if(!searchedLocation.includes(schedule.summary.destination)) {
+                            baseInfo.append("<div class='station_arrow'>\u25B6</div>");
+                            var destdisp = $("<div class='station_box'>");
+                            destdisp.append("<div class='dest_time before'>"+schedule.summary.arrivalTime.substring(0,5)+"</div>");
+                            destdisp.append("<div style='text-align: center; font-size: larger'>"+schedule.summary.destinationDisplayName+"</div>");
+                            destdisp.append("<div class='dest_time after'>"+schedule.summary.arrivalTime.substring(0,5)+"</div>");
+                            destdisp.appendTo(baseInfo);
+                        } else {
+                            baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
+                            baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
+                        }
+                        var xtraInfo = $("<div>")
+                        xtraInfo.append("<div style='width: 50%; float: left'>"+schedule.summary.trainType+" operated by "+schedule.summary.trainOperator+"</div>");
+                        // xtraInfo.append("<div style='width: 50%; float: left'>"+schedule.summary.trainUid+"</div>");
+                        baseInfo.appendTo(entry);
+                        xtraInfo.appendTo(entry);
                         entry.appendTo(display);
                     }
                     display.appendTo($('#search_result').empty().show());
@@ -131,6 +178,7 @@
                     console.log(data);
                     $('#search_in_progress').hide();
                     $('#search_message').text("Error when searching for schedule. Try again later.").show();
+                    $('#search_result').hide();
                 }
             });
         }
@@ -139,6 +187,77 @@
         #search_input th {
             min-width: 150px;
             padding-right: 2em;
+        }
+
+        #search_result div.station_box {
+            width: 30%;
+            float: left;
+            text-align: center;
+        }
+        #search_result div.station_arrow {
+            width: 5%;
+            float: left;
+            text-align: center;
+            vertical-align: middle;
+        }
+        #search_result div.stn_time {
+            width: 33%;
+            float: left;
+            font-size: smaller;
+        }
+
+        #search_result div.origin_time {
+            width: 33%;
+            float: right;
+            font-size: smaller;
+            text-align: right;
+        }
+        #search_result div.dest_time {
+            font-size: smaller;
+        }
+        #search_result div.dest_time.after {
+            width: 33%;
+            float: left;
+            text-align: left;
+        }
+        #search_result div.before {
+            display: none;
+        }
+
+
+        @media(max-width : 600px) {
+            #search_result div.station_box {
+                width: 100%;
+                float: initial;
+                text-align: center;
+            }
+            #search_result div.station_arrow {
+                width: 100%;
+                float: initial;
+                text-align: center;
+                vertical-align: initial;
+                transform: rotate(90deg);
+            }
+            #search_result div.stn_time {
+                width: 100%;
+                float: initial;
+                font-size: smaller;
+            }
+            #search_result div.origin_time {
+                width: 100%;
+                float: initial;
+                text-align: center;
+            }
+            #search_result div.after {
+                display: none;
+             }
+            #search_result div.before {
+                width: 100%;
+                display: inline-block;
+            }
+            #search_result div.empty {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -163,8 +282,15 @@
         </tr>
         <tr>
             <th><label for="train_time">Time</label> </th>
-            <td><input name="time" type="text" id="train_time"></td>
+            <td><input name="time" type="time" id="train_time"></td>
             <td><span id="time_message" class="error" style="display: none;"></span></td>
+        </tr>
+        <tr>
+            <th colspan="2">
+                <input name="call_only" id="call_only" type="checkbox" value="true" checked>
+                <label for="call_only">Calling trains only</label>
+            </th>
+            <td>&nbsp;</td>
         </tr>
         <tr>
             <td colspan="3">
@@ -178,7 +304,7 @@
 </div>
 <div id="search_message" style="display: none;" class="error">
 </div>
-<div id="search_result" style="display: none;">
+<div id="search_result" style="display: none; box-sizing: content-box;">
 </div>
 <div th:replace="~{fragments/basic.html :: footer}"></div>
 </body>

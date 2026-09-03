@@ -20,11 +20,13 @@ public class TiplocService {
     private Logger logger = LoggerFactory.getLogger(TiplocService.class);
 
     private TreeMap<String, Tiploc> tiplocCache = new TreeMap<>();
+    private TreeMap<String, String> displayNameCache = new TreeMap<>();
 
     @Scheduled(fixedRate = 3600_000)
     public void clearCache() {
         logger.info("Clearing cache");
         tiplocCache = new TreeMap<>();
+        displayNameCache = new TreeMap<>();
     }
 
     public Tiploc getTiplocByTiplocCode(String tiplocCode) {
@@ -83,6 +85,32 @@ public class TiplocService {
         logger.info("TIPLOC Batch : Batch Size {}, Inserted {}, Updated {}, Deleted {}",
                 tiplocs.size(), result.getInserted(), result.getUpdated(), result.getDeleted());
         return result;
+    }
+
+    public String getDisplayNameByTiplocCode(String tiplocCode) {
+        if (displayNameCache.containsKey(tiplocCode)) {
+            return displayNameCache.get(tiplocCode);
+        }
+        //TODO: Get the display name from database
+        try {
+            List<String> displayNames = tiplocDao.getDisplayNameByTiplocCode(tiplocCode);
+            if (displayNames.size() == 0) {
+                return null;
+            }
+            String displayName = displayNames.get(0);
+            int idx = displayName.lastIndexOf(" Signal ");
+            if (idx != -1) {
+                displayName = displayName.substring(0, idx + 8) + displayName.substring(idx + 8).toUpperCase();
+            }
+            idx = displayName.lastIndexOf(" Sig. ");
+            if (idx != -1) {
+                displayName = displayName.substring(0, idx + 6) + displayName.substring(idx + 6).toUpperCase();
+            }
+            displayNameCache.put(tiplocCode, displayName);
+            return displayName;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

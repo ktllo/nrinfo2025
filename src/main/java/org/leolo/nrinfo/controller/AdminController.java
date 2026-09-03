@@ -2,6 +2,7 @@ package org.leolo.nrinfo.controller;
 
 import org.leolo.nrinfo.service.APIAuthenticationService;
 import org.leolo.nrinfo.service.ConfigurationService;
+import org.leolo.nrinfo.service.TiplocService;
 import org.leolo.nrinfo.service.UserPermissionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,6 +19,7 @@ public class AdminController {
     @Autowired private APIAuthenticationService apiAuthenticationService;
     @Autowired private UserPermissionService userPermissionService;
     @Autowired private ConfigurationService configurationService;
+    @Autowired private TiplocService tiplocService;
 
     @RequestMapping("clear/cache")
     public ResponseEntity clearConfigCache() {
@@ -28,6 +30,7 @@ public class AdminController {
             return ResponseUtil.buildForbiddenResponse();
         }
         configurationService.clearCache();
+        tiplocService.clearCache();
         return ResponseEntity.status(HttpStatus.OK).body(Map.of("message", "OK"));
     }
 
