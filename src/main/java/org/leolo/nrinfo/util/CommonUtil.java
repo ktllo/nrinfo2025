@@ -1,5 +1,7 @@
 package org.leolo.nrinfo.util;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.UUID;
 
 public class CommonUtil {
@@ -59,5 +61,12 @@ public class CommonUtil {
             };
         }
         return sb.toString();
+    }
+
+    public static String formatTime(SimpleDateFormat format, Date time) {
+        if (format == null || time == null) {
+            return null;
+        }
+        return format.format(time);
     }
 }

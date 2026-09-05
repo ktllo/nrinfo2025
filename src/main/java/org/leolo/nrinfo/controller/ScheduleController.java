@@ -1,7 +1,5 @@
 package org.leolo.nrinfo.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
 import org.leolo.nrinfo.dto.response.ScheduleSearchResult;
 import org.leolo.nrinfo.dto.response.TrainSchedule;
@@ -315,7 +313,7 @@ public class ScheduleController {
             method = RequestMethod.POST
     ) public ResponseEntity<?> oldSearch(
             @RequestBody ScheduleSearch searchParameter
-            ) {
+    ) {
         boolean isAuthenticated = authenticationService.isAuthenticated();
         ScheduleSearch.ValidateMode validateMode = null;
         int userId = -1;
@@ -371,13 +369,13 @@ public class ScheduleController {
                 if (searchParameter.getLocation() != null) {
                     for (ScheduleDetail scheduleDetail : schedule.getDetailList()) {
                         if (locationGroupMember.contains(scheduleDetail.getLocation())) {
-                            scheduleSearchResult.getDetails().add(fillEntryInfo(scheduleDetail));
+                            scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail));
                         }
                     }
                     if (baseSchedule != null) {
                         for (ScheduleDetail scheduleDetail : baseSchedule.getDetailList()) {
                             if (locationGroupMember.contains(scheduleDetail.getLocation())) {
-                                scheduleSearchResult.getDetails().add(fillEntryInfo(scheduleDetail));
+                                scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail));
                             }
                         }
                     }
@@ -388,6 +386,53 @@ public class ScheduleController {
                 result.put("searched_locations", searchedLocations);
             }
             result.put("schedules", searchResult);
+        } catch (SQLException e) {
+            log.error("There are error when searching for schedule - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Unable to search train schedule","There are error when searching train schedule. Please try again later.");
+        }
+        return ResponseEntity.ok(result);
+    }
+    @RequestMapping(
+            path = "/search",
+            method = RequestMethod.POST
+    ) public ResponseEntity<?> search(
+            @RequestBody ScheduleSearch searchParameter
+    ) {
+        boolean isAuthenticated = authenticationService.isAuthenticated();
+        ScheduleSearch.ValidateMode validateMode = null;
+        int userId = -1;
+        TreeMap<String, Object> result = new TreeMap<>();
+        result.put("result", "success");
+        if (!isAuthenticated) {
+            log.debug("User is not authenticated, will restrict the search");
+            validateMode = ScheduleSearch.ValidateMode.PUBLIC;
+        } else {
+            userId = authenticationService.getUserId();
+            log.debug("User is authenticated with UID {}", userId);
+            if (userPermissionService.hasPermission("SUPER_SCH_SEARCH")) {
+                validateMode = ScheduleSearch.ValidateMode.SUPER;
+            } else {
+                validateMode = ScheduleSearch.ValidateMode.REGULAR;
+            }
+        }
+        log.debug("Validate mode: {}", validateMode);
+        searchParameter.normalize();
+        searchParameter.validate(validateMode);
+        List<ScheduleSearchResult> searchResult = new ArrayList<>();
+        HashSet<String> locationGroupMember = new HashSet<>();
+        HashSet<String> searchedLocations = new HashSet<>();
+        searchedLocations.add(searchParameter.getLocation());
+        if (searchParameter.getPreviousVia() != null) {
+            locationGroupMember.add(searchParameter.getPreviousVia());
+        }
+        if (searchParameter.getWillGoVia() != null) {
+            locationGroupMember.add(searchParameter.getWillGoVia());
+        }
+        log.debug("Search parameter: {}", searchParameter);
+        try {
+            result.put("schedules", scheduleService.searchTrainScheduleForScheduleSearchResult(searchParameter));
+            result.put("searched_locations", searchedLocations);
+            result.put("search_parameter", searchParameter);
         } catch (SQLException e) {
             log.error("There are error when searching for schedule - {}", e.getMessage(), e);
             return ResponseUtil.buildFullErrorResponse("Unable to search train schedule","There are error when searching train schedule. Please try again later.");

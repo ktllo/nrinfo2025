@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.model.SearchParameter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,6 +9,8 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 
 public abstract class BaseDao {
@@ -84,6 +87,7 @@ public abstract class BaseDao {
                 if (isNull) {
                     ps.setNull(pos, param.getType());
                 } else {
+                    log.debug("[DATE]Given type is {}", param.getValue().getClass());
                     if (param.getValue() instanceof java.util.Date) {
                         ps.setDate(pos, new java.sql.Date(((java.util.Date) param.getValue()).getTime()));
                     } else if (param.getValue() instanceof Instant) {
@@ -97,9 +101,13 @@ public abstract class BaseDao {
                 if (isNull) {
                     ps.setNull(pos, param.getType());
                 } else {
+                    log.debug("[TIME]Given type is {}", param.getValue().getClass());
                     if (param.getValue() instanceof java.util.Date) {
-                        ps.setTime(pos, new java.sql.Time(((java.util.Date) param.getValue()).getTime() % 86400000L));
-                    } else if (param.getValue() instanceof Instant) {
+                        LocalDateTime ldt = ((java.util.Date)param.getValue()).toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalDateTime();
+                        ps.setObject(pos, ldt.toLocalTime(), Types.TIME);
+                    } else if (param.getValue() instanceof LocalTime) {
+                        ps.setObject(pos, (LocalTime) param.getValue());
+                    }else if (param.getValue() instanceof Instant) {
                         ps.setTime(pos, new java.sql.Time(((Instant) param.getValue()).toEpochMilli() % 86400000L));
                     } else {
                         log.warn("Invalid date type {}", param.getValue().getClass().getName());

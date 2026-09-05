@@ -50,6 +50,9 @@
               minDate: -14
            });
         });
+        function viewFullSchedule(uid, date) {
+            alert('Not implemented');
+        }
         function doSearch() {
             console.log("doing search");
             var location = $('#selected_location').val().trim();
@@ -96,6 +99,7 @@
             }
             console.log(request);
             $('#search_in_progress').show();
+            $("#search_result").hide();
             $.ajax({
                 url: "/api/schedule/search",
                 method: "POST",
@@ -110,67 +114,98 @@
                     }
                     const searchedLocation = data.searched_locations;
                     var display = $('<div>');
-                    for (const schedule of data.schedules) {
-                        var entry = $('<div style="border: 1px solid black;font-size: large; display: flow-root;">');
-                        var baseInfo = $('<div style=" display: flow-root;">');
-                        if (!searchedLocation.includes(schedule.summary.origin)) {
-                            var oridisp = $("<div class='station_box'>");
-                            oridisp.append("<div style='text-align: center; font-size: larger'>"+schedule.summary.originDisplayName+"</div>");
-                            oridisp.append("<div class='origin_time'>"+schedule.summary.departureTime.substring(0,5)+"</div>");
-                            oridisp.appendTo(baseInfo);
-                            baseInfo.append("<div class='station_arrow'>\u25B6</div>");
-                        } else {
-                            //Train originates from here
-                            baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
-                            baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
-                        }
-                        var curdisp = $("<div class='station_box'>");
-                        if (schedule.details.length === 1) {
-                            var arrTime = schedule.details[0].gbttArrivalTime;
+                    var prev = $('<button>');
+                    prev.text("Previous Hour");
+                    prev.on('click', function() {
+                        console.log("Going to previous hour");
+                        const param = data.search_parameter;
+                        $('#selected_location').val(param.location);
+                        $('#call_only').val(param.callOnly);
+                        var time = moment(param.fromTime).subtract(1, 'hour');
+                        $('#train_date').val(time.format("YYYY-MM-DD"));
+                        $('#train_time').val(time.format("HH:mm"));
+                        doSearch();
+                    });
+                    prev.appendTo(display);
+                    if (data.schedules.length > 0) {
+                        for (const schedule of data.schedules) {
+                            var entry = $('<div style="border: 1px solid black;font-size: large; display: flow-root;">');
+                            var baseInfo = $('<div style=" display: flow-root;">');
+                            if (!searchedLocation.includes(schedule.summary.origin)) {
+                                var oridisp = $("<div class='station_box'>");
+                                oridisp.append("<div style='text-align: center; font-size: larger'>" + schedule.summary.originDisplayName + "</div>");
+                                oridisp.append("<div class='origin_time'>" + schedule.summary.departureTime.substring(0, 5) + "</div>");
+                                oridisp.appendTo(baseInfo);
+                                baseInfo.append("<div class='station_arrow'>\u25B6</div>");
+                            } else {
+                                //Train originates from here
+                                baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
+                                baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
+                            }
+                            var curdisp = $("<div class='station_box'>");
+                            var arrTime = schedule.detail.gbttArrivalTime ?? schedule.detail.wttArrivalTime;
                             if (arrTime) {
                                 curdisp.append("<div class='stn_time before'>" + arrTime.substring(0, 5) + "</div>");
                             }
-                        }
-                        curdisp.append("<div style='text-align: center; font-size: larger'>"+$('#location').val()+"</div>");
-                        if (schedule.details.length === 1) {
-                            const detail = schedule.details[0];
-                            var curdetail = $("<div>");
-                            if (arrTime) {
-                                curdisp.append("<div class='stn_time after'>"+arrTime.substring(0,5)+"</div>");
-                            } else {
-                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                            curdisp.append("<div style='text-align: center; font-size: larger'>" + $('#location').val() + "</div>");
+                            if (schedule.detail) {
+                                const detail = schedule.detail
+                                var curdetail = $("<div>");
+                                if (arrTime) {
+                                    curdisp.append("<div class='stn_time after " + (schedule.detail.gbttArrivalTime ? "" : "wtt") + "'>" + arrTime.substring(0, 5) + "</div>");
+                                } else {
+                                    curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                                }
+                                if (detail.platform) {
+                                    curdisp.append("<div  class='stn_time' style='font-size: small'>Platform <span style='font-weight: bold; font-size: larger;'>" + detail.platform + "</span></div>");
+                                } else {
+                                    curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                                }
+                                var depTime = detail.gbttDepartureTime ?? detail.wttDepartureTime;
+                                var passTime = detail.wttPassTime;
+                                if (depTime) {
+                                    curdisp.append("<div class='stn_time " + (schedule.detail.gbttDepartureTime ? "" : "wtt") + "'>" + depTime.substring(0, 5) + "</div>");
+                                } else if (passTime) {
+                                    curdisp.append("<div class='stn_time wtt'>pass " + passTime.substring(0, 5) + "</div>");
+                                } else {
+                                    curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                                }
                             }
-                            if (detail.platform) {
-                                curdisp.append("<div  class='stn_time' style='font-size: small'>Platform <span style='font-weight: bold; font-size: larger;'>"+detail.platform+"</span></div>");
+                            curdisp.appendTo(baseInfo);
+                            if (!searchedLocation.includes(schedule.summary.destination)) {
+                                baseInfo.append("<div class='station_arrow'>\u25B6</div>");
+                                var destdisp = $("<div class='station_box'>");
+                                destdisp.append("<div class='dest_time before'>" + schedule.summary.arrivalTime.substring(0, 5) + "</div>");
+                                destdisp.append("<div style='text-align: center; font-size: larger'>" + schedule.summary.destinationDisplayName + "</div>");
+                                destdisp.append("<div class='dest_time after'>" + schedule.summary.arrivalTime.substring(0, 5) + "</div>");
+                                destdisp.appendTo(baseInfo);
                             } else {
-                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
+                                baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
+                                baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
                             }
-                            var depTime = detail.gbttDepartureTime;
-                            if (depTime) {
-                                curdisp.append("<div class='stn_time'>"+depTime.substring(0,5)+"</div>");
-                            } else {
-                                curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
-                            }
+                            var xtraInfo = $("<div>")
+                            xtraInfo.append("<div class='xtra_info'>" + schedule.summary.trainType + " service operated by " + schedule.summary.trainOperator + "</div>");
+                            xtraInfo.append("<div class='xtra_info' style='text-align: right' onclick='viewFullSchedule(\"" + schedule.summary.trainUid + "\",\"" + schedule.summary.scheduleDate + "\")'>View full schedule</div>");
+                            baseInfo.appendTo(entry);
+                            xtraInfo.appendTo(entry);
+                            entry.appendTo(display);
                         }
-                        curdisp.appendTo(baseInfo);
-                        if(!searchedLocation.includes(schedule.summary.destination)) {
-                            baseInfo.append("<div class='station_arrow'>\u25B6</div>");
-                            var destdisp = $("<div class='station_box'>");
-                            destdisp.append("<div class='dest_time before'>"+schedule.summary.arrivalTime.substring(0,5)+"</div>");
-                            destdisp.append("<div style='text-align: center; font-size: larger'>"+schedule.summary.destinationDisplayName+"</div>");
-                            destdisp.append("<div class='dest_time after'>"+schedule.summary.arrivalTime.substring(0,5)+"</div>");
-                            destdisp.appendTo(baseInfo);
-                        } else {
-                            baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
-                            baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
-                        }
-                        var xtraInfo = $("<div>")
-                        xtraInfo.append("<div style='width: 50%; float: left'>"+schedule.summary.trainType+" operated by "+schedule.summary.trainOperator+"</div>");
-                        // xtraInfo.append("<div style='width: 50%; float: left'>"+schedule.summary.trainUid+"</div>");
-                        baseInfo.appendTo(entry);
-                        xtraInfo.appendTo(entry);
-                        entry.appendTo(display);
+                    } else {
+                        $("<div>Sorry, there are no train that fit your search criteria. Please amend them and try again</div>").appendTo(display);
                     }
+                    var next = $('<button>');
+                    next.text("Next Hour");
+                    next.on('click', function() {
+                        console.log("Going to next hour");
+                        const param = data.search_parameter;
+                        $('#selected_location').val(param.location);
+                        $('#call_only').val(param.callOnly);
+                        var time = moment(param.fromTime).add(1, 'hour');
+                        $('#train_date').val(time.format("YYYY-MM-DD"));
+                        $('#train_time').val(time.format("HH:mm"));
+                        doSearch();
+                    });
+                    next.appendTo(display);
                     display.appendTo($('#search_result').empty().show());
                     $('#search_in_progress').hide();
                 },
@@ -223,8 +258,14 @@
         #search_result div.before {
             display: none;
         }
-
-
+        #search_result div.wtt {
+            font-style: italic;
+        }
+        #search_result div.xtra_info {
+            font-size: smaller;
+            width: 50%;
+            float: left;
+        }
         @media(max-width : 600px) {
             #search_result div.station_box {
                 width: 100%;
@@ -257,6 +298,10 @@
             }
             #search_result div.empty {
                 display: none;
+            }
+            #search_result div.xtra_info {
+                float: initial;
+                width: 100%;
             }
         }
     </style>

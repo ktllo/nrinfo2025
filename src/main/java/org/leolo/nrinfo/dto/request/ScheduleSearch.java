@@ -2,15 +2,19 @@ package org.leolo.nrinfo.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.exception.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.List;
@@ -18,12 +22,13 @@ import java.util.List;
 @Getter
 @Setter
 @ToString
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ScheduleSearch {
 
     private String location;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = Constants.DEFAULT_TIMEZONE_NAME)
     private Date fromTime;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss", timezone = Constants.DEFAULT_TIMEZONE_NAME)
     private Date toTime;
     private int pageSize = 0;
     private boolean callOnly = false;
@@ -40,6 +45,15 @@ public class ScheduleSearch {
     @JsonIgnore
     public static final Logger log = LoggerFactory.getLogger(ScheduleSearch.class);
 
+    @JsonIgnore
+    public LocalTime getFromLocalTime(){
+        return fromTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime();
+    }
+
+    @JsonIgnore
+    public LocalTime getToLocalTime(){
+        return toTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime();
+    }
 
     public void normalize() {
         if (location != null) {

@@ -798,8 +798,9 @@ public class ScheduleDao extends BaseDao {
         if (scheduleSearch.getLocation() != null) {
 
             sbSql.append("and ").append(timeFilterFields).append(" BETWEEN ? AND ? ");
-            params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromTime()));
-            params.add(new SearchParameter(Types.TIME, scheduleSearch.getToTime()));
+            log.debug("Filtering time : {} - {}", scheduleSearch.getFromLocalTime(), scheduleSearch.getToLocalTime());
+            params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromLocalTime()));
+            params.add(new SearchParameter(Types.TIME, scheduleSearch.getToLocalTime()));
         }
         //Operator
         if (scheduleSearch.getTrainOperator() != null && !scheduleSearch.getTrainOperator().isEmpty()) {

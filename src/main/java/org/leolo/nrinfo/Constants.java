@@ -1,6 +1,10 @@
 package org.leolo.nrinfo;
+import java.time.ZoneId;
 
 public class Constants {
+
+    public static final String DEFAULT_TIMEZONE_NAME = "Europe/London";
+    public static final ZoneId DEFAULT_TIMEZONE = ZoneId.of(DEFAULT_TIMEZONE_NAME);
     public static class EpsgCode {
         public static final int WGS84 = 4326;
         public static final int UKOS = 27700;

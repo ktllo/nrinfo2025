@@ -8,10 +8,14 @@ import org.leolo.nrinfo.dao.TrainOperatorDao;
 import org.leolo.nrinfo.dto.external.networkrail.Schedule;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
 import org.leolo.nrinfo.dto.response.ScheduleSearchResult;
-import org.leolo.nrinfo.dto.response.TrainSchedule;
+import org.leolo.nrinfo.dto.response.TrainScheduleEntry;
 import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.enums.PowerType;
+import org.leolo.nrinfo.enums.TrainCategory;
 import org.leolo.nrinfo.model.ScheduleAssociation;
+import org.leolo.nrinfo.model.ScheduleDetail;
+import org.leolo.nrinfo.model.Tiploc;
+import org.leolo.nrinfo.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +23,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -33,6 +39,8 @@ public class ScheduleService {
     @Autowired
     private TrainOperatorDao trainOperatorDao;
     @Autowired private GenericCacheService genericCacheService;
+    @Autowired
+    private TiplocService tiplocService;
 
     public DatabaseOperationResult processAssociationBatch(Collection<org.leolo.nrinfo.dto.external.networkrail.Association> associations) {
         DatabaseOperationResult result = new DatabaseOperationResult();
@@ -354,11 +362,148 @@ public class ScheduleService {
         //Get a list of matching UUIDs first
         List<UUID> matchingScheduleUUIDs = scheduleDao.searchTrainSchedule(scheduleSearch);
         List<ScheduleSearchResult> searchResult = new ArrayList<>();
-        //Round 1: get the matching schedule
-        for (UUID uuid: matchingScheduleUUIDs) {
-            org.leolo.nrinfo.model.Schedule ts = getScheduleByUUID(uuid);
+        HashSet<String> searchedLocations = new HashSet<>();
+        HashSet<String> otherLocations = new HashSet<>();
+        if (scheduleSearch.getLocation() != null) {
+            searchedLocations.addAll(tiplocService.getGroupMembers(scheduleSearch.getLocation()));
         }
-        return null;
+        searchedLocations.add(scheduleSearch.getLocation());
+        log.debug("Expanded locations: {}", searchedLocations);
+        if (scheduleSearch.getPreviousVia() != null) {
+            otherLocations.addAll(tiplocService.getGroupMembers(scheduleSearch.getPreviousVia()));
+            otherLocations.add(scheduleSearch.getPreviousVia());
+        }
+        if (scheduleSearch.getWillGoVia() != null) {
+            otherLocations.addAll(tiplocService.getGroupMembers(scheduleSearch.getWillGoVia()));
+            otherLocations.add(scheduleSearch.getWillGoVia());
+        }
+        //Step 1: get the matching schedule
+        for (UUID uuid: matchingScheduleUUIDs) {
+            ScheduleSearchResult scheduleSearchResult = new ScheduleSearchResult();
+            org.leolo.nrinfo.model.Schedule schedule = getScheduleByUUID(uuid);
+//            log.debug("Parsing schedule {}", uuid);
+            org.leolo.nrinfo.model.Schedule baseSchedule = null;
+            scheduleSearchResult.setSummary(fillSummary(schedule, scheduleSearch.getFromTime()));
+            scheduleSearchResult.getSummary().setStpIndicator(schedule.getStpIndicator());
+            if ("C".equalsIgnoreCase(schedule.getStpIndicator())) {
+                //This is a cancellation, we want to include the base schedule
+                log.debug("Schedule is cancelled, will use base schedule information for basic fields");
+                baseSchedule = getScheduleByUUID(getBaseScheduleUUID(schedule.getTrainUid(),scheduleSearch.getFromTime()));
+                scheduleSearchResult.setBaseSchedule(fillSummary(baseSchedule, scheduleSearch.getFromTime()));
+            }
+            int matchedLocations = 0;
+            for (ScheduleDetail sd: schedule.getDetailList()) {
+                if (otherLocations.contains(sd.getLocation())) {
+                    scheduleSearchResult.getOtherDetails().add(fillEntryInfo(sd));
+                }
+            }
+            for (ScheduleDetail sd: schedule.getDetailList()) {
+                if(searchedLocations.contains(sd.getLocation())) {
+                    matchedLocations++;
+                    ScheduleSearchResult clonedSearchResult = (ScheduleSearchResult) scheduleSearchResult.clone();
+                    clonedSearchResult.setDetail(fillEntryInfo(sd));
+                    searchResult.add(clonedSearchResult);
+//                    log.debug("Adding entry to the list - {}", sd.getLocation());
+                }
+            }
+            if (matchedLocations == 0) {
+                log.warn("No matches found for {}", uuid);
+            }
+        }
+        //Step 2: Sort them!
+        //TODO: Decide which one to use
+        searchResult.sort(ScheduleSearchResult.SORT_BY_DEPARTURE_TIME);
+        //Step 3: Re-filter the time
+        List<ScheduleSearchResult> filteredSearchResults = new ArrayList<>();
+        for (ScheduleSearchResult sr: searchResult) {
+            LocalTime nominalTime;
+            //TODO: Decide which one to use
+            nominalTime = sr.getNominalTime(ScheduleSearchResult.NominalTimeMode.DEPARTURE);
+            if (nominalTime.isAfter(scheduleSearch.getFromLocalTime()) && nominalTime.isBefore(scheduleSearch.getToLocalTime())) {
+                filteredSearchResults.add(sr);
+            }
+        }
+        return filteredSearchResults;
         
     }
+
+    private TrainScheduleSummary fillSummary(org.leolo.nrinfo.model.Schedule schedule, Date parsedDate) throws SQLException {
+        TrainScheduleSummary trainSchedule = new TrainScheduleSummary();
+        TreeSet<String> tiplocs = new TreeSet<>();
+        for (ScheduleDetail sd: schedule.getDetailList()) {
+            tiplocs.add(sd.getLocation());
+        }
+        Map<String, Tiploc> locations = tiplocService.getTiplocsByTiplocCodes(tiplocs);
+        trainSchedule.setTrainUid(schedule.getTrainUid());
+
+
+        if (schedule.getOperator()==null) {
+            //Try to get it from base schedule
+            org.leolo.nrinfo.model.Schedule baseSchedule = null;
+            baseSchedule = getScheduleByUUID(getBaseScheduleUUID(schedule.getTrainUid(), parsedDate));
+
+            if (baseSchedule == null || baseSchedule.getOperator() == null) {
+                trainSchedule.setTrainOperator("Unknown");
+            } else {
+                log.debug("No TOC info for applicable schedule but found operator {} in base schedule", baseSchedule.getOperator());
+                trainSchedule.setTrainOperator(getTrainOperatorName(baseSchedule.getOperator()));
+            }
+        } else {
+            trainSchedule.setTrainOperator(getTrainOperatorName(schedule.getOperator()));
+        }
+        trainSchedule.setTrainType(TrainCategory.getTrainCategory(schedule.getTrainCategory()).getDisplayName());
+        trainSchedule.setScheduleDate(new SimpleDateFormat("yyyy-MM-dd").format(parsedDate));
+        SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
+        if (!tiplocs.isEmpty()) {
+            ScheduleDetail firstLocation = schedule.getDetailList().getFirst();
+            ScheduleDetail lastLocation = schedule.getDetailList().getLast();
+            trainSchedule.setOrigin(locations.get(firstLocation.getLocation()).getTiplocCode());
+            trainSchedule.setDestination(locations.get(lastLocation.getLocation()).getTiplocCode());
+            trainSchedule.setOriginDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getOrigin()));
+            trainSchedule.setDestinationDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getDestination()));
+            if (firstLocation.getPublicDepartureTime() == null) {
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getDepartureTime()));
+            } else {
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getPublicDepartureTime()));
+            }
+            if (lastLocation.getPublicArrivalTime() == null) {
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getArrivalTime()));
+            } else {
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime()));
+            }
+        }
+        return trainSchedule;
+    }
+
+    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail) {
+        SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
+        TrainScheduleEntry entry = new TrainScheduleEntry();
+        Tiploc tiploc = tiplocService.getTiplocByTiplocCode(detail.getLocation());
+        if (tiploc == null) {
+            log.warn("No tiploc record found for location {}", detail.getLocation());
+            return null;
+        }
+        entry.setTiplocCode(tiploc.getTiplocCode());
+        entry.setLocationName(tiploc.getDescription());
+        entry.setDisplayName(tiplocService.getDisplayNameByTiplocCode(tiploc.getTiplocCode()));
+        entry.setCrsCode(tiploc.getCrsCode());
+        //Fill in the time
+        entry.setWttArrivalTime(CommonUtil.formatTime(fullTime, detail.getArrivalTime()));
+        entry.setWttPassTime(CommonUtil.formatTime(fullTime, detail.getPassTime()));
+        entry.setWttDepartureTime(CommonUtil.formatTime(fullTime, detail.getDepartureTime()));
+        entry.setGbttArrivalTime(CommonUtil.formatTime(fullTime, detail.getPublicArrivalTime()));
+        entry.setGbttDepartureTime(CommonUtil.formatTime(fullTime, detail.getPublicDepartureTime()));
+        //Pathing
+        //Path in, Line out
+        entry.setPath(detail.getPath());
+        entry.setPlatform(detail.getPlatform());
+        entry.setLine(detail.getLine());
+        //Allowance
+        entry.setPathingAllowance(CommonUtil.formatTime(fullTime, detail.getPathingAllowance()));
+        entry.setPerformanceAllowance(CommonUtil.formatTime(fullTime, detail.getPerformanceAllowance()));
+        entry.setEngineeringAllowance(CommonUtil.formatTime(fullTime, detail.getEngineeringAllowance()));
+        return entry;
+    }
+
+
 }
