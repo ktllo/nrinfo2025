@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -352,6 +353,38 @@ public class ScheduleService {
     
     //This is an enhanced version of the deprecated searchTrainSchedule(ScheduleSearch)
     public List<ScheduleSearchResult> searchTrainScheduleForScheduleSearchResult(ScheduleSearch scheduleSearch) throws SQLException {
+        log.debug("SDF: {}; SDT: {}",
+                scheduleSearch.getFromTime().toInstant().atZone(Constants.DEFAULT_TIMEZONE).truncatedTo(ChronoUnit.DAYS),
+                scheduleSearch.getToTime().toInstant().atZone(Constants.DEFAULT_TIMEZONE).truncatedTo(ChronoUnit.DAYS));
+        if (
+                scheduleSearch.getFromTime().toInstant().atZone(Constants.DEFAULT_TIMEZONE).truncatedTo(ChronoUnit.DAYS).equals(
+                        scheduleSearch.getToTime().toInstant().atZone(Constants.DEFAULT_TIMEZONE).truncatedTo(ChronoUnit.DAYS)
+                )) {
+            log.debug("Search period is on same day, perform search directly");
+            //Only on a single day, can do search directly
+            return  doSearchTrainScheduleForScheduleSearchResult(scheduleSearch);
+        } else {
+            log.debug("Search period split into 2 days, we will also split it into 2 searches");
+            //Need to split into 2 days
+            List<ScheduleSearchResult> results = new ArrayList<>();
+            Date fromDate = scheduleSearch.getFromTime();
+            Date toDate = scheduleSearch.getToTime();
+            ZonedDateTime toInstant = toDate.toInstant().atZone(Constants.DEFAULT_TIMEZONE).truncatedTo(ChronoUnit.DAYS);
+            scheduleSearch.setToTime(Date.from(toInstant.plus(-1, ChronoUnit.MILLIS).toInstant()));
+            //Part 1
+            results.addAll(doSearchTrainScheduleForScheduleSearchResult(scheduleSearch));
+            scheduleSearch.setFromTime(Date.from(toInstant.toInstant()));
+            scheduleSearch.setToTime(toDate);
+            //Part 2
+            results.addAll(doSearchTrainScheduleForScheduleSearchResult(scheduleSearch));
+            //Restore the "from time" which used in the response
+            scheduleSearch.setFromTime(fromDate);
+            return results;
+        }
+    }
+
+    private List<ScheduleSearchResult> doSearchTrainScheduleForScheduleSearchResult(ScheduleSearch scheduleSearch) throws SQLException {
+
         Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
         Duration cacheAge = Duration.between(cacheDate, Instant.now());
         //We should rebuild cache daily, we check add 10 minutes to the rebuild check to avoid rebuilding them multiple times
@@ -424,7 +457,6 @@ public class ScheduleService {
             }
         }
         return filteredSearchResults;
-        
     }
 
     private TrainScheduleSummary fillSummary(org.leolo.nrinfo.model.Schedule schedule, Date parsedDate) throws SQLException {

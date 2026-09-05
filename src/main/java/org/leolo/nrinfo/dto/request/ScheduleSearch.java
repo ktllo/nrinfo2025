@@ -100,6 +100,8 @@ public class ScheduleSearch {
             throw new ValidationException("duration cannot be greater than 60 minutes");
         } else if (validateMode == ValidateMode.REGULAR && duration.compareTo(Duration.ofMinutes(180)) > 0) {
             throw new ValidationException("duration cannot be greater than 180 minutes");
+        } else if (duration.compareTo(Duration.ofDays(1)) > 0) {
+            throw new ValidationException("duration cannot be greater than 1 day");
         }
         if (!fromInstant.truncatedTo(ChronoUnit.DAYS).equals(toInstant.truncatedTo(ChronoUnit.DAYS))) {
             throw new ValidationException("fromTime and toTime must be on same day");
