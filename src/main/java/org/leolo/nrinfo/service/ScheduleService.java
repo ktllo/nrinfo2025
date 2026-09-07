@@ -452,7 +452,10 @@ public class ScheduleService {
             LocalTime nominalTime;
             //TODO: Decide which one to use
             nominalTime = sr.getNominalTime(ScheduleSearchResult.NominalTimeMode.DEPARTURE);
-            if (nominalTime.isAfter(scheduleSearch.getFromLocalTime()) && nominalTime.isBefore(scheduleSearch.getToLocalTime())) {
+            if (
+                    (nominalTime.isAfter(scheduleSearch.getFromLocalTime()) && nominalTime.isBefore(scheduleSearch.getToLocalTime())) ||
+                            nominalTime.equals(scheduleSearch.getFromLocalTime()) || nominalTime.equals(scheduleSearch.getToLocalTime())
+            ) {
                 filteredSearchResults.add(sr);
             }
         }
