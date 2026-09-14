@@ -36,7 +36,6 @@ import static org.mockito.Mockito.*;
 @SpringBootTest
 @ExtendWith(SpringExtension.class)
 @Execution(ExecutionMode.SAME_THREAD)
-
 public class TiplocServiceTest {
 
     private Class<org.leolo.nrinfo.dto.external.networkrail.Tiploc> dtoClazz = org.leolo.nrinfo.dto.external.networkrail.Tiploc.class;

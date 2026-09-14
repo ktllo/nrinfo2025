@@ -9,3 +9,7 @@ function toggle_display(cont_name) {
         $('#hint_' + cont_name).text('-');
     }
 }
+
+function formatDate(date, format =  "YYYY-MM-DD HH:mm:ss") {
+    return moment(date, "YYYY-MM-DD HH:mm:ss").format(format);
+}

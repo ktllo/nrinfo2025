@@ -16,13 +16,18 @@ import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
 import org.leolo.nrinfo.model.Tiploc;
 import org.leolo.nrinfo.util.CommonUtil;
+import org.leolo.nrinfo.util.DummyDurationFormatter;
+import org.leolo.nrinfo.util.MiscUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import scala.Tuple2;
 
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.Instant;
@@ -72,6 +77,7 @@ public class ScheduleService {
         try {
             for (Schedule schedule : schedules) {
                 org.leolo.nrinfo.model.Schedule scheduleModel = schedule.toModel();
+                processCrossDaySchedule(scheduleModel);
                 if (schedule.getTransactionType().equalsIgnoreCase("create")) {
                     result = result.add(scheduleDao.insertSchedule(scheduleModel));
                 } else if (schedule.getTransactionType().equalsIgnoreCase("delete")) {
@@ -84,6 +90,68 @@ public class ScheduleService {
         log.info("Schedule Batch : Batch Size {}, Inserted {}, Updated {}, Deleted {}",
                 schedules.size(), result.getInserted(), result.getUpdated(), result.getDeleted());
         return result;
+    }
+
+    public void processCrossDaySchedule(org.leolo.nrinfo.model.Schedule schedule) {
+        Duration lastTime = null;
+        boolean addDay = false;
+        schedule:
+        for (ScheduleDetail sd: schedule.getDetailList()) {
+            if (addDay) {
+                //We need to add a day to the time anyway, we don't have to check anything
+                sd.setPublicArrivalTime(addDay(sd.getPublicArrivalTime()));
+                sd.setArrivalTime(addDay(sd.getArrivalTime()));
+                sd.setPassTime(addDay(sd.getPassTime()));
+                sd.setDepartureTime(addDay(sd.getDepartureTime()));
+                sd.setPublicDepartureTime(addDay(sd.getPublicDepartureTime()));
+                //No need to check
+                continue schedule;
+            }
+            if (lastTime != null) {
+                if (sd.getArrivalTime()!=null && sd.getArrivalTime().compareTo(lastTime) < 0) {
+                    sd.setArrivalTime(addDay(sd.getArrivalTime()));
+                    addDay = true;
+                }
+                if (sd.getPublicArrivalTime()!=null && sd.getPublicArrivalTime().compareTo(lastTime) < 0) {
+                    sd.setPublicArrivalTime(addDay(sd.getPublicArrivalTime()));
+                    addDay = true;
+                }
+                if (sd.getPassTime()!=null && sd.getPassTime().compareTo(lastTime) < 0) {
+                    sd.setPassTime(addDay(sd.getPassTime()));
+                    addDay = true;
+                }
+                if (sd.getDepartureTime()!=null && sd.getDepartureTime().compareTo(lastTime) < 0) {
+                    sd.setDepartureTime(addDay(sd.getDepartureTime()));
+                    addDay = true;
+                }
+                if (sd.getPublicDepartureTime()!=null && sd.getPublicDepartureTime().compareTo(lastTime) < 0) {
+                    sd.setPublicDepartureTime(addDay(sd.getPublicDepartureTime()));
+                    addDay = true;
+                }
+            }
+            lastTime = MiscUtil.max(
+                    lastTime,
+                    sd.getPublicArrivalTime(),
+                    sd.getArrivalTime(),
+                    sd.getPassTime(),
+                    sd.getPublicDepartureTime(),
+                    sd.getDepartureTime()
+            );
+        }
+    }
+
+    Time addDay(Time time) {
+        if (time == null) {
+            return null;
+        }
+        return new Time(time.getTime() + 86400000);
+    }
+
+    Duration addDay(Duration duration) {
+        if (duration == null) {
+            return null;
+        }
+        return duration.plus(Duration.ofDays(1));
     }
 
     @Scheduled(cron = "30 0 22 * * *")
@@ -119,6 +187,7 @@ public class ScheduleService {
     }
 
     public void insertSchedule(org.leolo.nrinfo.model.Schedule schedule) throws SQLException {
+        processCrossDaySchedule(schedule);
         scheduleDao.insertSchedule(schedule);
     }
 
@@ -348,7 +417,11 @@ public class ScheduleService {
             log.info("Cache is too old ({}), rebuilding them!", cacheAge);
             scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
         }
-        return scheduleDao.searchTrainSchedule(scheduleSearch);
+        List<UUID> uuidList = new ArrayList<>();
+        for (Tuple2<UUID, Date> tuple: scheduleDao.searchTrainSchedule(scheduleSearch)) {
+            uuidList.add(tuple._1);
+        }
+        return uuidList;
     }
     
     //This is an enhanced version of the deprecated searchTrainSchedule(ScheduleSearch)
@@ -383,7 +456,9 @@ public class ScheduleService {
         }
     }
 
-    private List<ScheduleSearchResult> doSearchTrainScheduleForScheduleSearchResult(ScheduleSearch scheduleSearch) throws SQLException {
+    private List<ScheduleSearchResult> doSearchTrainScheduleForScheduleSearchResult(
+            ScheduleSearch scheduleSearch
+    ) throws SQLException {
 
         Instant cacheDate = scheduleDao.getOldestCacheDate(scheduleSearch.getFromTime());
         Duration cacheAge = Duration.between(cacheDate, Instant.now());
@@ -393,7 +468,11 @@ public class ScheduleService {
             scheduleDao.cacheSchedule(scheduleSearch.getFromTime().toInstant());
         }
         //Get a list of matching UUIDs first
-        List<UUID> matchingScheduleUUIDs = scheduleDao.searchTrainSchedule(scheduleSearch);
+        List<Tuple2<UUID, Date>> matchingScheduleUUIDs = new ArrayList<>();
+        log.debug("Depart same day");
+        matchingScheduleUUIDs.addAll(scheduleDao.searchTrainSchedule(scheduleSearch, Constants.SQLTypes.DATE_ADJUSTED_DURATION_BASE));
+        log.debug("Depart on day before");
+        matchingScheduleUUIDs.addAll(scheduleDao.searchTrainSchedule(scheduleSearch, Constants.SQLTypes.DATE_ADJUSTED_DURATION_MIUS_DAY));
         List<ScheduleSearchResult> searchResult = new ArrayList<>();
         HashSet<String> searchedLocations = new HashSet<>();
         HashSet<String> otherLocations = new HashSet<>();
@@ -411,30 +490,32 @@ public class ScheduleService {
             otherLocations.add(scheduleSearch.getWillGoVia());
         }
         //Step 1: get the matching schedule
-        for (UUID uuid: matchingScheduleUUIDs) {
+        for (Tuple2<UUID, Date> matchingEntry: matchingScheduleUUIDs) {
+            UUID uuid = matchingEntry._1;
+            Date scheduleDate = matchingEntry._2;
             ScheduleSearchResult scheduleSearchResult = new ScheduleSearchResult();
             org.leolo.nrinfo.model.Schedule schedule = getScheduleByUUID(uuid);
 //            log.debug("Parsing schedule {}", uuid);
             org.leolo.nrinfo.model.Schedule baseSchedule = null;
-            scheduleSearchResult.setSummary(fillSummary(schedule, scheduleSearch.getFromTime()));
+            scheduleSearchResult.setSummary(fillSummary(schedule, scheduleDate));
             scheduleSearchResult.getSummary().setStpIndicator(schedule.getStpIndicator());
             if ("C".equalsIgnoreCase(schedule.getStpIndicator())) {
                 //This is a cancellation, we want to include the base schedule
                 log.debug("Schedule is cancelled, will use base schedule information for basic fields");
-                baseSchedule = getScheduleByUUID(getBaseScheduleUUID(schedule.getTrainUid(),scheduleSearch.getFromTime()));
-                scheduleSearchResult.setBaseSchedule(fillSummary(baseSchedule, scheduleSearch.getFromTime()));
+                baseSchedule = getScheduleByUUID(getBaseScheduleUUID(schedule.getTrainUid(), scheduleDate));
+                scheduleSearchResult.setBaseSchedule(fillSummary(baseSchedule, scheduleDate));
             }
             int matchedLocations = 0;
             for (ScheduleDetail sd: schedule.getDetailList()) {
                 if (otherLocations.contains(sd.getLocation())) {
-                    scheduleSearchResult.getOtherDetails().add(fillEntryInfo(sd));
+                    scheduleSearchResult.getOtherDetails().add(fillEntryInfo(sd, scheduleDate));
                 }
             }
             for (ScheduleDetail sd: schedule.getDetailList()) {
                 if(searchedLocations.contains(sd.getLocation())) {
                     matchedLocations++;
                     ScheduleSearchResult clonedSearchResult = (ScheduleSearchResult) scheduleSearchResult.clone();
-                    clonedSearchResult.setDetail(fillEntryInfo(sd));
+                    clonedSearchResult.setDetail(fillEntryInfo(sd, scheduleDate));
                     searchResult.add(clonedSearchResult);
 //                    log.debug("Adding entry to the list - {}", sd.getLocation());
                 }
@@ -488,7 +569,7 @@ public class ScheduleService {
         }
         trainSchedule.setTrainType(TrainCategory.getTrainCategory(schedule.getTrainCategory()).getDisplayName());
         trainSchedule.setScheduleDate(new SimpleDateFormat("yyyy-MM-dd").format(parsedDate));
-        SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
+        DummyDurationFormatter fullTime = new DummyDurationFormatter();
         if (!tiplocs.isEmpty()) {
             ScheduleDetail firstLocation = schedule.getDetailList().getFirst();
             ScheduleDetail lastLocation = schedule.getDetailList().getLast();
@@ -497,20 +578,20 @@ public class ScheduleService {
             trainSchedule.setOriginDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getOrigin()));
             trainSchedule.setDestinationDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getDestination()));
             if (firstLocation.getPublicDepartureTime() == null) {
-                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getDepartureTime()));
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getDepartureTime(),parsedDate));
             } else {
-                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getPublicDepartureTime()));
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getPublicDepartureTime(),parsedDate));
             }
             if (lastLocation.getPublicArrivalTime() == null) {
-                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getArrivalTime()));
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getArrivalTime(),parsedDate));
             } else {
-                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime()));
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime(),parsedDate));
             }
         }
         return trainSchedule;
     }
 
-    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail) {
+    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail, Date scheduleDate) {
         SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
         TrainScheduleEntry entry = new TrainScheduleEntry();
         Tiploc tiploc = tiplocService.getTiplocByTiplocCode(detail.getLocation());
@@ -523,20 +604,20 @@ public class ScheduleService {
         entry.setDisplayName(tiplocService.getDisplayNameByTiplocCode(tiploc.getTiplocCode()));
         entry.setCrsCode(tiploc.getCrsCode());
         //Fill in the time
-        entry.setWttArrivalTime(CommonUtil.formatTime(fullTime, detail.getArrivalTime()));
-        entry.setWttPassTime(CommonUtil.formatTime(fullTime, detail.getPassTime()));
-        entry.setWttDepartureTime(CommonUtil.formatTime(fullTime, detail.getDepartureTime()));
-        entry.setGbttArrivalTime(CommonUtil.formatTime(fullTime, detail.getPublicArrivalTime()));
-        entry.setGbttDepartureTime(CommonUtil.formatTime(fullTime, detail.getPublicDepartureTime()));
+        entry.setWttArrivalTime(CommonUtil.formatTime(scheduleDate, detail.getArrivalTime(), true));
+        entry.setWttPassTime(CommonUtil.formatTime(scheduleDate, detail.getPassTime(), true));
+        entry.setWttDepartureTime(CommonUtil.formatTime(scheduleDate, detail.getDepartureTime(), true));
+        entry.setGbttArrivalTime(CommonUtil.formatTime(scheduleDate, detail.getPublicArrivalTime(), true));
+        entry.setGbttDepartureTime(CommonUtil.formatTime(scheduleDate, detail.getPublicDepartureTime(), true));
         //Pathing
         //Path in, Line out
         entry.setPath(detail.getPath());
         entry.setPlatform(detail.getPlatform());
         entry.setLine(detail.getLine());
         //Allowance
-        entry.setPathingAllowance(CommonUtil.formatTime(fullTime, detail.getPathingAllowance()));
-        entry.setPerformanceAllowance(CommonUtil.formatTime(fullTime, detail.getPerformanceAllowance()));
-        entry.setEngineeringAllowance(CommonUtil.formatTime(fullTime, detail.getEngineeringAllowance()));
+        entry.setPathingAllowance(CommonUtil.formatTime(detail.getPathingAllowance(), false));
+        entry.setPerformanceAllowance(CommonUtil.formatTime(detail.getPerformanceAllowance(), false));
+        entry.setEngineeringAllowance(CommonUtil.formatTime(detail.getEngineeringAllowance(), false));
         return entry;
     }
 

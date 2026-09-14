@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -72,7 +73,7 @@ public class ScheduleSearchResult implements Cloneable {
                     time = detail.getWttArrivalTime();
                 }
             }
-            return LocalTime.parse(time);
+            return LocalTime.parse(time.substring(11));//Remove the date
         }
         return null;
     }

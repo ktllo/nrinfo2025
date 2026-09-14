@@ -1,6 +1,7 @@
 package org.leolo.nrinfo.util;
 
 import java.sql.Time;
+import java.time.Duration;
 
 public class ScheduleUtil {
     public static Time parseTime(String time) {
@@ -69,5 +70,50 @@ public class ScheduleUtil {
             runs.append("O");
             return runs.toString();
         }
+    }
+
+    public static Duration parseDuration(String time) {
+        if (time == null || time.isEmpty()) {
+            return null;
+        }
+        if (time.length() < 4) {
+            throw new IllegalArgumentException("Invalid time format: " + time);
+        }
+        int hour = parseInt(time.substring(0, 2));
+        int minute = parseInt(time.substring(2, 4));
+        int second = time.length() >=5 && 'H' == time.charAt(4) ? 30: 0;
+
+        return Duration.ofHours(hour).plusMinutes(minute).plusSeconds(second);
+    }
+
+    public static Duration parseAllowanceDuration(String time) {
+        if (time == null || time.isBlank()) {
+            return null;
+        }
+        if (time.length() > 2) {
+            throw new IllegalArgumentException("Invalid time format: " + time);
+        }
+        time = time.strip();
+        if ("H".equals(time)) {
+            return Duration.ofSeconds(30);
+        }
+        int minute = parseInt(time.substring(0, 1));
+        if (time.endsWith("H")) {
+            return Duration.ofMinutes(minute).plusSeconds(30);
+        }
+        return Duration.ofMinutes(minute);
+    }
+
+    public static int parseInt(String str) {
+        if (str == null || str.isEmpty()) {
+            return 0;
+        }
+        if (str.startsWith("-")) {
+            return parseInt(str.substring(1)) * -1;
+        }
+        if (str.startsWith("0")) {
+            return parseInt(str.substring(1));
+        }
+        return Integer.parseInt(str);
     }
 }

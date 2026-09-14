@@ -1,4 +1,5 @@
 package org.leolo.nrinfo;
+import java.sql.Types;
 import java.time.ZoneId;
 
 public class Constants {
@@ -26,6 +27,21 @@ public class Constants {
         public static final String OPERATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
 
         public static final String OPERATOR_NAME_TEMPLATE = "operator.name.%s";
+    }
+
+    public static class SQLTypes {
+        //Extensions on java.sql.Types
+        public static final int DATE_ADJUSTED_DURATION_BASE     = 0x60010000;
+        public static final int DATE_ADJUSTED_DURATION_PLUS_DAY = 0x60030000;
+        public static final int DATE_ADJUSTED_DURATION_MIUS_DAY = 0x60050000;
+
+
+        public static final int DURATION_AS_TIME           = DATE_ADJUSTED_DURATION_BASE | Types.TIME;
+        public static final int DURATION_AS_TIME_PLUS_DAY  = DATE_ADJUSTED_DURATION_PLUS_DAY | Types.TIME;
+        public static final int DURATION_AS_TIME_MINUS_DAY = DATE_ADJUSTED_DURATION_MIUS_DAY | Types.TIME;
+        public static final int ADJUSTED_DATE              = DATE_ADJUSTED_DURATION_BASE | Types.DATE;
+        public static final int ADJUSTED_DATE_PLUS_DAY     = DATE_ADJUSTED_DURATION_PLUS_DAY | Types.DATE;
+        public static final int ADJUSTED_DATE_MINUS_DAY    = DATE_ADJUSTED_DURATION_MIUS_DAY | Types.DATE;
     }
 
     public static class AIPrompt {

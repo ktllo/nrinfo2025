@@ -55,6 +55,21 @@ public class ScheduleSearch {
         return toTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime();
     }
 
+    @JsonIgnore
+    public Duration getFromTimeAsDuration(){
+        return Duration.between(
+                fromTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime().truncatedTo(ChronoUnit.DAYS),
+                fromTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime()
+        );
+    }
+    @JsonIgnore
+    public Duration getToTimeAsDuration(){
+        return Duration.between(
+                toTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime().truncatedTo(ChronoUnit.DAYS),
+                toTime.toInstant().atZone(Constants.DEFAULT_TIMEZONE).toLocalTime()
+        );
+    }
+
     public void normalize() {
         if (location != null) {
             location = location.trim().toUpperCase();

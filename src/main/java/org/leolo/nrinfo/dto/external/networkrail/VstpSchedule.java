@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import java.sql.Time;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Date;
 
@@ -83,14 +84,14 @@ public class VstpSchedule {
             ScheduleDetail scheduleDetail = new ScheduleDetail();
             scheduleDetail.setLocation(location.getTiplocId());
             try {
-                scheduleDetail.setArrivalTime(parseLocationTime(location.getScheduledArrivalTime()));
-                scheduleDetail.setDepartureTime(parseLocationTime(location.getScheduledDepartureTime()));
-                scheduleDetail.setPassTime(parseLocationTime(location.getScheduledPassTime()));
-                scheduleDetail.setPublicArrivalTime(parseLocationTime(location.getPublicArrivalTime()));
-                scheduleDetail.setPublicDepartureTime(parseLocationTime(location.getPublicDepartureTime()));
-                scheduleDetail.setPathingAllowance(ScheduleUtil.parseAllowance(location.getPathingAllowance()));
-                scheduleDetail.setPerformanceAllowance(ScheduleUtil.parseAllowance(location.getPerformanceAllowance()));
-                scheduleDetail.setEngineeringAllowance(ScheduleUtil.parseAllowance(location.getEngineeringAllowance()));
+                scheduleDetail.setArrivalTime(parseLocationDuration(location.getScheduledArrivalTime()));
+                scheduleDetail.setDepartureTime(parseLocationDuration(location.getScheduledDepartureTime()));
+                scheduleDetail.setPassTime(parseLocationDuration(location.getScheduledPassTime()));
+                scheduleDetail.setPublicArrivalTime(parseLocationDuration(location.getPublicArrivalTime()));
+                scheduleDetail.setPublicDepartureTime(parseLocationDuration(location.getPublicDepartureTime()));
+                scheduleDetail.setPathingAllowance(ScheduleUtil.parseAllowanceDuration(location.getPathingAllowance()));
+                scheduleDetail.setPerformanceAllowance(ScheduleUtil.parseAllowanceDuration(location.getPerformanceAllowance()));
+                scheduleDetail.setEngineeringAllowance(ScheduleUtil.parseAllowanceDuration(location.getEngineeringAllowance()));
             } catch (ParseException pe) {
                 throw new IllegalArgumentException("Location time could not be parsed", pe);
             }
@@ -108,6 +109,16 @@ public class VstpSchedule {
         }
         SimpleDateFormat sdf = new SimpleDateFormat("HHmmss");
         return new Time(sdf.parse(time).getTime());
+    }
+
+    private Duration parseLocationDuration(String time) throws ParseException {
+        if (time == null || time.isBlank()) {
+            return null;
+        }
+        return Duration
+                .ofHours(ScheduleUtil.parseInt(time.substring(0, 2)))
+                .plusMinutes(ScheduleUtil.parseInt(time.substring(2, 4)))
+                .plusSeconds(ScheduleUtil.parseInt(time.substring(4, 6)));
     }
     private String preprocessSublocation(String sublocation) {
         if (sublocation == null || sublocation.isBlank()) {

@@ -61,17 +61,17 @@ public class Schedule {
                     ScheduleDetail detail = new ScheduleDetail();
                     detail.setLocation(location.getTiplocCode());
                     detail.setLocationInstance(location.getTiplocInstance());
-                    detail.setArrivalTime(ScheduleUtil.parseTime(location.getArrivalTime()));
-                    detail.setDepartureTime(ScheduleUtil.parseTime(location.getDepartureTime()));
-                    detail.setPassTime(ScheduleUtil.parseTime(location.getPassTime()));
-                    detail.setPublicArrivalTime(ScheduleUtil.parseTime(location.getPublicArrivalTime()));
-                    detail.setPublicDepartureTime(ScheduleUtil.parseTime(location.getPublicDepartureTime()));
+                    detail.setArrivalTime(ScheduleUtil.parseDuration(location.getArrivalTime()));
+                    detail.setDepartureTime(ScheduleUtil.parseDuration(location.getDepartureTime()));
+                    detail.setPassTime(ScheduleUtil.parseDuration(location.getPassTime()));
+                    detail.setPublicArrivalTime(ScheduleUtil.parseDuration(location.getPublicArrivalTime()));
+                    detail.setPublicDepartureTime(ScheduleUtil.parseDuration(location.getPublicDepartureTime()));
                     detail.setPlatform(location.getPlatform());
                     detail.setPath(location.getPath());
                     detail.setLine(location.getLine());
-                    detail.setEngineeringAllowance(ScheduleUtil.parseAllowance(location.getEngineeringAllowance()));
-                    detail.setPerformanceAllowance(ScheduleUtil.parseAllowance(location.getPerformanceAllowance()));
-                    detail.setPathingAllowance(ScheduleUtil.parseAllowance(location.getPathingAllowance()));
+                    detail.setEngineeringAllowance(ScheduleUtil.parseAllowanceDuration(location.getEngineeringAllowance()));
+                    detail.setPerformanceAllowance(ScheduleUtil.parseAllowanceDuration(location.getPerformanceAllowance()));
+                    detail.setPathingAllowance(ScheduleUtil.parseAllowanceDuration(location.getPathingAllowance()));
                     schedule.getDetailList().add(detail);
                 }
             }

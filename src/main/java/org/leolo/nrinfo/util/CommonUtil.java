@@ -1,6 +1,8 @@
 package org.leolo.nrinfo.util;
 
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.UUID;
 
@@ -69,4 +71,34 @@ public class CommonUtil {
         }
         return format.format(time);
     }
+
+    public static String formatTime(Duration duration, boolean hourParts) {
+        if (duration == null) {
+            return null;
+        }
+        if (hourParts) {
+            return String.format("%02d:%02d:%02d", duration.toHoursPart(), duration.toMinutesPart(), duration.toSecondsPart());
+        } else {
+            return String.format("%02d:%02d:%02d", duration.toHours(), duration.toMinutesPart(), duration.toSecondsPart());
+        }
+    }
+    public static String formatTime(Date baseDate,Duration duration, boolean hourParts) {
+        if (baseDate == null || duration == null) {
+            return null;
+        }
+        if (baseDate instanceof java.sql.Date) {
+            baseDate = new Date(baseDate.getTime());
+        }
+        if (hourParts && duration.compareTo(Duration.ofDays(1)) >= 0) {
+            baseDate = Date.from(baseDate.toInstant().plus(1, ChronoUnit.DAYS));
+        }
+        String formattedDate = new SimpleDateFormat("yyyy-MM-dd").format(baseDate);
+        if (hourParts) {
+            return formattedDate+String.format(" %02d:%02d:%02d", duration.toHoursPart(), duration.toMinutesPart(), duration.toSecondsPart());
+        } else {
+            return formattedDate+String.format(" %02d:%02d:%02d", duration.toHours(), duration.toMinutesPart(), duration.toSecondsPart());
+        }
+    }
+
+
 }

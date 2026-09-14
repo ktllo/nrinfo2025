@@ -20,4 +20,50 @@ public class MiscUtil {
             throw new ParseException("Invalid date format", -1);
         }
     }
+
+    public static <E extends Comparable<E>> E min(E... elem) {
+        if (elem == null || elem.length == 0) {
+            return null;
+        }
+        if (elem.length == 1) {
+            return elem[0];
+        }
+        E min = null;
+        for (E e : elem) {
+            if (e == null) {
+                continue;
+            }
+            if (min == null) {
+                min = e;
+            } else {
+                if (e.compareTo(min) < 0) {
+                    min = e;
+                }
+            }
+        }
+        return min;
+    }
+
+    public static <E extends Comparable<E>> E max(E... elem) {
+        if (elem == null || elem.length == 0) {
+            return null;
+        }
+        if (elem.length == 1) {
+            return elem[0];
+        }
+        E max = null;
+        for (E e : elem) {
+            if (e == null) {
+                continue;
+            }
+            if (max == null) {
+                max = e;
+            } else {
+                if (e.compareTo(max) > 0) {
+                    max = e;
+                }
+            }
+        }
+        return max;
+    }
 }

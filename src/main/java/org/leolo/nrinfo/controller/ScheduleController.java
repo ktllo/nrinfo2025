@@ -16,6 +16,8 @@ import org.leolo.nrinfo.service.APIAuthenticationService;
 import org.leolo.nrinfo.service.ScheduleService;
 import org.leolo.nrinfo.service.TiplocService;
 import org.leolo.nrinfo.service.UserPermissionService;
+import org.leolo.nrinfo.util.CommonUtil;
+import org.leolo.nrinfo.util.DummyDurationFormatter;
 import org.leolo.nrinfo.util.ScheduleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,8 @@ import org.springframework.web.bind.annotation.*;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @RestController
@@ -112,7 +116,7 @@ public class ScheduleController {
             trainSchedule.setTrainOperator(scheduleService.getTrainOperatorName(schedule.getOperator()));
         }
         trainSchedule.setTrainType(TrainCategory.getTrainCategory(schedule.getTrainCategory()).getDisplayName());
-        SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
+        DummyDurationFormatter fullTime = new DummyDurationFormatter();
         if (!tiplocs.isEmpty()) {
             ScheduleDetail firstLocation = schedule.getDetailList().getFirst();
             ScheduleDetail lastLocation = schedule.getDetailList().getLast();
@@ -121,14 +125,14 @@ public class ScheduleController {
             trainSchedule.setOriginDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getOrigin()));
             trainSchedule.setDestinationDisplayName(tiplocService.getDisplayNameByTiplocCode(trainSchedule.getDestination()));
             if (firstLocation.getPublicDepartureTime() == null) {
-                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getDepartureTime()));
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getDepartureTime(), parsedDate));
             } else {
-                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getPublicDepartureTime()));
+                trainSchedule.setDepartureTime(fullTime.format(firstLocation.getPublicDepartureTime(), parsedDate));
             }
             if (lastLocation.getPublicArrivalTime() == null) {
-                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getArrivalTime()));
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getArrivalTime(), parsedDate));
             } else {
-                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime()));
+                trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime(), parsedDate));
             }
         }
         return trainSchedule;
@@ -225,18 +229,18 @@ public class ScheduleController {
             trainSchedule.setOrigin(locations.get(firstLocation.getLocation()).getDescription());
             trainSchedule.setDestination(locations.get(lastLocation.getLocation()).getDescription());
             if (firstLocation.getPublicDepartureTime() == null) {
-                trainSchedule.setDepartureTime(formatTime(fullTime, firstLocation.getDepartureTime()));
+                trainSchedule.setDepartureTime(CommonUtil.formatTime(parsedDate, firstLocation.getDepartureTime(), true));
             } else {
-                trainSchedule.setDepartureTime(formatTime(fullTime, firstLocation.getPublicDepartureTime()));
+                trainSchedule.setDepartureTime(CommonUtil.formatTime(parsedDate, firstLocation.getPublicDepartureTime(), true));
             }
             if (lastLocation.getPublicArrivalTime() == null) {
-                trainSchedule.setArrivalTime(formatTime(fullTime, lastLocation.getArrivalTime()));
+                trainSchedule.setArrivalTime(CommonUtil.formatTime(parsedDate, lastLocation.getArrivalTime(), true));
             } else {
-                trainSchedule.setArrivalTime(formatTime(fullTime, lastLocation.getPublicArrivalTime()));
+                trainSchedule.setArrivalTime(CommonUtil.formatTime(parsedDate, lastLocation.getPublicArrivalTime(), true));
             }
         }
         for (ScheduleDetail sd: schedule.getDetailList()) {
-            TrainScheduleEntry entry = fillEntryInfo(sd);
+            TrainScheduleEntry entry = fillEntryInfo(sd, parsedDate);
             int instance = sd.getLocationInstance();
             ScheduleAssociation sa = scheduleService.getAssociation(associations, schedule.getTrainUid(), sd.getLocation(), instance);
             if (sa != null) {
@@ -271,7 +275,7 @@ public class ScheduleController {
         return ResponseEntity.ok(Map.of("result","success", "schedule", trainSchedule));
     }
 
-    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail) {
+    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail, Date baseDate) {
         SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
         TrainScheduleEntry entry = new TrainScheduleEntry();
         Tiploc tiploc = tiplocService.getTiplocByTiplocCode(detail.getLocation());
@@ -284,28 +288,21 @@ public class ScheduleController {
         entry.setDisplayName(tiplocService.getDisplayNameByTiplocCode(tiploc.getTiplocCode()));
         entry.setCrsCode(tiploc.getCrsCode());
         //Fill in the time
-        entry.setWttArrivalTime(formatTime(fullTime, detail.getArrivalTime()));
-        entry.setWttPassTime(formatTime(fullTime, detail.getPassTime()));
-        entry.setWttDepartureTime(formatTime(fullTime, detail.getDepartureTime()));
-        entry.setGbttArrivalTime(formatTime(fullTime, detail.getPublicArrivalTime()));
-        entry.setGbttDepartureTime(formatTime(fullTime, detail.getPublicDepartureTime()));
+        entry.setWttArrivalTime(CommonUtil.formatTime(baseDate, detail.getArrivalTime(), true));
+        entry.setWttPassTime(CommonUtil.formatTime(baseDate, detail.getPassTime(), true));
+        entry.setWttDepartureTime(CommonUtil.formatTime(baseDate, detail.getDepartureTime(), true));
+        entry.setGbttArrivalTime(CommonUtil.formatTime(baseDate, detail.getPublicArrivalTime(), true));
+        entry.setGbttDepartureTime(CommonUtil.formatTime(baseDate, detail.getPublicDepartureTime(), true));
         //Pathing
         //Path in, Line out
         entry.setPath(detail.getPath());
         entry.setPlatform(detail.getPlatform());
         entry.setLine(detail.getLine());
         //Allowance
-        entry.setPathingAllowance(formatTime(fullTime, detail.getPathingAllowance()));
-        entry.setPerformanceAllowance(formatTime(fullTime, detail.getPerformanceAllowance()));
-        entry.setEngineeringAllowance(formatTime(fullTime, detail.getEngineeringAllowance()));
+        entry.setPathingAllowance(CommonUtil.formatTime(detail.getPathingAllowance(), false));
+        entry.setPerformanceAllowance(CommonUtil.formatTime(detail.getPerformanceAllowance(), false));
+        entry.setEngineeringAllowance(CommonUtil.formatTime(detail.getEngineeringAllowance(), false));
         return entry;
-    }
-
-    private static String formatTime(SimpleDateFormat format, Date time) {
-        if (format == null || time == null) {
-            return null;
-        }
-        return format.format(time);
     }
 
     @RequestMapping(
@@ -369,13 +366,13 @@ public class ScheduleController {
                 if (searchParameter.getLocation() != null) {
                     for (ScheduleDetail scheduleDetail : schedule.getDetailList()) {
                         if (locationGroupMember.contains(scheduleDetail.getLocation())) {
-                            scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail));
+                            scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail, null));
                         }
                     }
                     if (baseSchedule != null) {
                         for (ScheduleDetail scheduleDetail : baseSchedule.getDetailList()) {
                             if (locationGroupMember.contains(scheduleDetail.getLocation())) {
-                                scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail));
+                                scheduleSearchResult.getOtherDetails().add(fillEntryInfo(scheduleDetail, null));
                             }
                         }
                     }

@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.dao;
 
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
 import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.model.Schedule;
@@ -12,11 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
+import scala.Tuple2;
 
 import javax.sql.DataSource;
 import java.sql.*;
 import java.time.Instant;
 import java.util.*;
+import java.util.Date;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -202,9 +205,9 @@ public class ScheduleDao extends BaseDao {
                 ScheduleDetail firstDetail = schedule.getDetailList().getFirst();
                 ScheduleDetail lastDetail = schedule.getDetailList().getLast();
                 setString(psSch, 23, firstDetail.getLocation());
-                psSch.setTime(24, firstDetail.getDepartureTime());
+                setDuration(psSch, 24, firstDetail.getDepartureTime());
                 setString(psSch, 25, lastDetail.getLocation());
-                psSch.setTime(26, lastDetail.getArrivalTime());
+                setDuration(psSch, 26, lastDetail.getArrivalTime());
             } else {
                 psSch.setNull(23, Types.CHAR);
                 psSch.setNull(25, Types.CHAR);
@@ -220,17 +223,17 @@ public class ScheduleDao extends BaseDao {
                     psDetail.setInt(2, i);
                     psDetail.setString(3, detail.getLocation());
                     psDetail.setInt(4, detail.getLocationInstance());
-                    psDetail.setTime(5, detail.getArrivalTime());
-                    psDetail.setTime(6, detail.getDepartureTime());
-                    psDetail.setTime(7, detail.getPassTime());
-                    psDetail.setTime(8, detail.getPublicArrivalTime());
-                    psDetail.setTime(9, detail.getPublicDepartureTime());
+                    setDuration(psDetail, 5, detail.getArrivalTime());
+                    setDuration(psDetail, 6, detail.getDepartureTime());
+                    setDuration(psDetail, 7, detail.getPassTime());
+                    setDuration(psDetail, 8, detail.getPublicArrivalTime());
+                    setDuration(psDetail, 9, detail.getPublicDepartureTime());
                     psDetail.setString(10, detail.getPlatform());
                     psDetail.setString(11, detail.getLine());
                     psDetail.setString(12, detail.getPath());
-                    psDetail.setTime(13, detail.getEngineeringAllowance());
-                    psDetail.setTime(14, detail.getPathingAllowance());
-                    psDetail.setTime(15, detail.getPerformanceAllowance());
+                    setDuration(psDetail, 13, detail.getEngineeringAllowance());
+                    setDuration(psDetail, 14, detail.getPathingAllowance());
+                    setDuration(psDetail, 15, detail.getPerformanceAllowance());
                     psDetail.addBatch();
                 }
                 psDetail.executeBatch();
@@ -561,17 +564,17 @@ public class ScheduleDao extends BaseDao {
                     ScheduleDetail scheduleDetail = new ScheduleDetail();
                     scheduleDetail.setLocation(rs.getString("location"));
                     scheduleDetail.setLocationInstance(rs.getInt("location_instance"));
-                    scheduleDetail.setArrivalTime(rs.getTime("arrival_time"));
-                    scheduleDetail.setDepartureTime(rs.getTime("departure_time"));
-                    scheduleDetail.setPassTime(rs.getTime("pass_time"));
-                    scheduleDetail.setPublicArrivalTime(rs.getTime("public_arrival_time"));
-                    scheduleDetail.setPublicDepartureTime(rs.getTime("public_departure_time"));
+                    scheduleDetail.setArrivalTime(getDuration(rs, "arrival_time"));
+                    scheduleDetail.setDepartureTime(getDuration(rs, "departure_time"));
+                    scheduleDetail.setPassTime(getDuration(rs, "pass_time"));
+                    scheduleDetail.setPublicArrivalTime(getDuration(rs, "public_arrival_time"));
+                    scheduleDetail.setPublicDepartureTime(getDuration(rs, "public_departure_time"));
                     scheduleDetail.setPlatform(rs.getString("platform"));
                     scheduleDetail.setLine(rs.getString("line"));
                     scheduleDetail.setPath(rs.getString("path"));
-                    scheduleDetail.setEngineeringAllowance(rs.getTime("engineering_allowance"));
-                    scheduleDetail.setPathingAllowance(rs.getTime("pathing_allowance"));
-                    scheduleDetail.setPerformanceAllowance(rs.getTime("performance_allowance"));
+                    scheduleDetail.setEngineeringAllowance(getDuration(rs, "engineering_allowance"));
+                    scheduleDetail.setPathingAllowance(getDuration(rs, "pathing_allowance"));
+                    scheduleDetail.setPerformanceAllowance(getDuration(rs, "performance_allowance"));
                     schedule.getDetailList().add(scheduleDetail);
                 }
             }
@@ -649,8 +652,12 @@ public class ScheduleDao extends BaseDao {
         return null;
     }
 
-    public List<UUID> searchTrainSchedule(ScheduleSearch scheduleSearch) throws SQLException {
-        List<UUID> list = new ArrayList<>();
+    public List<Tuple2<UUID, Date>> searchTrainSchedule(ScheduleSearch scheduleSearch) throws SQLException {
+        return searchTrainSchedule(scheduleSearch, Constants.SQLTypes.DATE_ADJUSTED_DURATION_BASE);
+    }
+
+    public List<Tuple2<UUID, Date>> searchTrainSchedule(ScheduleSearch scheduleSearch, final int DATE_MODE) throws SQLException {
+        List<Tuple2<UUID, Date>> list = new ArrayList<>();
 
         List<SearchParameter> params = new ArrayList<>();
         //Shared part
@@ -675,7 +682,7 @@ public class ScheduleDao extends BaseDao {
         timeFilterFields.append(") ");
         //Build the SQL
         StringBuilder sbSql = new StringBuilder();
-        sbSql.append("select distinct s.schedule_uuid ");
+        sbSql.append("select distinct s.schedule_uuid, sm.schedule_date ");
         sbSql.append("from schedule s ");
         sbSql.append("left join schedule_map sm on s.schedule_uuid = sm.schedule_uuid ");
         if (scheduleSearch.getLocation() != null) {
@@ -723,7 +730,7 @@ public class ScheduleDao extends BaseDao {
 
         sbSql.append("where 1=1 ");
         sbSql.append("and sm.schedule_date = ? ");
-        params.add(new SearchParameter(Types.DATE, scheduleSearch.getFromTime()));
+        params.add(new SearchParameter(DATE_MODE | Types.DATE, scheduleSearch.getFromTime()));
 
         if (scheduleSearch.getLocation() != null) {
             if (scheduleSearch.isStrictLocationMatch()) {
@@ -796,11 +803,10 @@ public class ScheduleDao extends BaseDao {
         }
         //Time
         if (scheduleSearch.getLocation() != null) {
-
             sbSql.append("and ").append(timeFilterFields).append(" BETWEEN ? AND ? ");
-            log.debug("Filtering time : {} - {}", scheduleSearch.getFromLocalTime(), scheduleSearch.getToLocalTime());
-            params.add(new SearchParameter(Types.TIME, scheduleSearch.getFromLocalTime()));
-            params.add(new SearchParameter(Types.TIME, scheduleSearch.getToLocalTime()));
+            log.debug("Filtering time : {} - {} <<<", scheduleSearch.getFromLocalTime(), scheduleSearch.getToLocalTime());
+            params.add(new SearchParameter(DATE_MODE | Types.TIME, scheduleSearch.getFromTimeAsDuration()));
+            params.add(new SearchParameter(DATE_MODE | Types.TIME, scheduleSearch.getToTimeAsDuration()));
         }
         //Operator
         if (scheduleSearch.getTrainOperator() != null && !scheduleSearch.getTrainOperator().isEmpty()) {
@@ -852,7 +858,7 @@ public class ScheduleDao extends BaseDao {
                 int rowCount = 0;
                 while (rs.next()) {
                     UUID rowUUID = CommonUtil.bytesToUUID(rs.getBytes(1));
-                    list.add(rowUUID);
+                    list.add(new Tuple2<>(rowUUID, getDate(rs, 2)));
                     rowCount++;
                 }
                 log.info("Found {} rows", rowCount);

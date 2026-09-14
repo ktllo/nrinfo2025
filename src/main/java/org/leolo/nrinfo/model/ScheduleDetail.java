@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.sql.Time;
+import java.time.Duration;
 
 @Getter
 @Setter
@@ -12,17 +12,17 @@ import java.sql.Time;
 public class ScheduleDetail {
     private String location;
     private int locationInstance;
-    private Time arrivalTime;
-    private Time departureTime;
-    private Time passTime;
-    private Time publicArrivalTime;
-    private Time publicDepartureTime;
+    private Duration arrivalTime;
+    private Duration departureTime;
+    private Duration passTime;
+    private Duration publicArrivalTime;
+    private Duration publicDepartureTime;
 
     private String platform;
     private String line;
     private String path;
 
-    private Time engineeringAllowance;
-    private Time pathingAllowance;
-    private Time performanceAllowance;
+    private Duration engineeringAllowance;
+    private Duration pathingAllowance;
+    private Duration performanceAllowance;
 }

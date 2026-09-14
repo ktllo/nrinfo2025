@@ -51,7 +51,7 @@
            });
         });
         function viewFullSchedule(uid, date) {
-            alert('Not implemented');
+            window.location.href = "/schedule/" + uid + "/" + date;
         }
         function doSearch() {
             console.log("doing search");
@@ -134,7 +134,7 @@
                             if (!searchedLocation.includes(schedule.summary.origin)) {
                                 var oridisp = $("<div class='station_box'>");
                                 oridisp.append("<div style='text-align: center; font-size: larger'>" + schedule.summary.originDisplayName + "</div>");
-                                oridisp.append("<div class='origin_time'>" + schedule.summary.departureTime.substring(0, 5) + "</div>");
+                                oridisp.append("<div class='origin_time'>" + formatDate(schedule.summary.departureTime, "HH:mm") + "</div>");
                                 oridisp.appendTo(baseInfo);
                                 baseInfo.append("<div class='station_arrow'>\u25B6</div>");
                             } else {
@@ -145,14 +145,15 @@
                             var curdisp = $("<div class='station_box'>");
                             var arrTime = schedule.detail.gbttArrivalTime ?? schedule.detail.wttArrivalTime;
                             if (arrTime) {
-                                curdisp.append("<div class='stn_time before'>" + arrTime.substring(0, 5) + "</div>");
+                                curdisp.append("<div class='stn_time before'>" + formatDate(arrTime, "HH:mm") + "</div>");
                             }
                             curdisp.append("<div style='text-align: center; font-size: larger'>" + $('#location').val() + "</div>");
                             if (schedule.detail) {
                                 const detail = schedule.detail
                                 var curdetail = $("<div>");
                                 if (arrTime) {
-                                    curdisp.append("<div class='stn_time after " + (schedule.detail.gbttArrivalTime ? "" : "wtt") + "'>" + arrTime.substring(0, 5) + "</div>");
+                                    curdisp.append("<div class='stn_time after " + (schedule.detail.gbttArrivalTime ? "" : "wtt") + "'>" +
+                                        formatDate(arrTime, "HH:mm") + "</div>");
                                 } else {
                                     curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
                                 }
@@ -164,9 +165,11 @@
                                 var depTime = detail.gbttDepartureTime ?? detail.wttDepartureTime;
                                 var passTime = detail.wttPassTime;
                                 if (depTime) {
-                                    curdisp.append("<div class='stn_time " + (schedule.detail.gbttDepartureTime ? "" : "wtt") + "'>" + depTime.substring(0, 5) + "</div>");
+                                    curdisp.append("<div class='stn_time " + (schedule.detail.gbttDepartureTime ? "" : "wtt") + "'>" +
+                                        formatDate(depTime, "HH:mm") + "</div>");
                                 } else if (passTime) {
-                                    curdisp.append("<div class='stn_time wtt'>pass " + passTime.substring(0, 5) + "</div>");
+                                    curdisp.append("<div class='stn_time wtt'>pass " +
+                                        formatDate(passTime, "HH:mm") + "</div>");
                                 } else {
                                     curdisp.append("<div class='stn_time empty'>&nbsp;</div>");
                                 }
@@ -175,9 +178,9 @@
                             if (!searchedLocation.includes(schedule.summary.destination)) {
                                 baseInfo.append("<div class='station_arrow'>\u25B6</div>");
                                 var destdisp = $("<div class='station_box'>");
-                                destdisp.append("<div class='dest_time before'>" + schedule.summary.arrivalTime.substring(0, 5) + "</div>");
+                                destdisp.append("<div class='dest_time before'>" + formatDate(schedule.summary.arrivalTime, "HH:mm") + "</div>");
                                 destdisp.append("<div style='text-align: center; font-size: larger'>" + schedule.summary.destinationDisplayName + "</div>");
-                                destdisp.append("<div class='dest_time after'>" + schedule.summary.arrivalTime.substring(0, 5) + "</div>");
+                                destdisp.append("<div class='dest_time after'>" + formatDate(schedule.summary.arrivalTime, "HH:mm") + "</div>");
                                 destdisp.appendTo(baseInfo);
                             } else {
                                 baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
