@@ -1,9 +1,9 @@
 /*M!999999\- enable the sandbox mode */
--- MariaDB dump 10.19  Distrib 10.11.11-MariaDB, for Linux (x86_64)
+-- MariaDB dump 10.19  Distrib 10.11.18-MariaDB, for Linux (x86_64)
 --
 -- Host: localhost    Database: nrinfo
 -- ------------------------------------------------------
--- Server version       10.11.11-MariaDB
+-- Server version       10.11.18-MariaDB
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -114,6 +114,22 @@ CREATE TABLE `corpus` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `invite_keys`
+--
+
+DROP TABLE IF EXISTS `invite_keys`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `invite_keys` (
+                               `invite_key` varchar(16) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+                               `create_date` datetime DEFAULT NULL,
+                               `use_left` int(11) DEFAULT NULL,
+                               `expiry_date` datetime DEFAULT NULL,
+                               PRIMARY KEY (`invite_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `job`
 --
 
@@ -150,6 +166,20 @@ CREATE TABLE `job_output` (
                               PRIMARY KEY (`job_output_id`),
                               KEY `job_output_job_id_IDX` (`job_id`) USING BTREE,
                               CONSTRAINT `job_output_job_FK` FOREIGN KEY (`job_id`) REFERENCES `job` (`job_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `manual_station_display_name`
+--
+
+DROP TABLE IF EXISTS `manual_station_display_name`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `manual_station_display_name` (
+                                               `tiploc_code` char(7) NOT NULL,
+                                               `display_name` varchar(100) DEFAULT NULL,
+                                               PRIMARY KEY (`tiploc_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -255,7 +285,25 @@ CREATE TABLE `permission` (
                               `description` text DEFAULT NULL,
                               PRIMARY KEY (`permission_id`),
                               KEY `permission_permission_name_IDX` (`permission_name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `preference`
+--
+
+DROP TABLE IF EXISTS `preference`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `preference` (
+                              `pref_name` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                              `display_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+                              `display_order` int(11) NOT NULL DEFAULT 0,
+                              `data_type` varchar(100) NOT NULL,
+                              `validation_class` varchar(1024) DEFAULT NULL,
+                              `default_value` text DEFAULT NULL,
+                              PRIMARY KEY (`pref_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -270,7 +318,7 @@ CREATE TABLE `role` (
                         `role_name` varchar(100) NOT NULL,
                         `role_description` text DEFAULT NULL,
                         PRIMARY KEY (`role_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -291,6 +339,48 @@ CREATE TABLE `role_permission` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `schedule`
+--
+
+DROP TABLE IF EXISTS `schedule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule` (
+                            `schedule_uuid` binary(16) NOT NULL,
+                            `train_uid` char(6) NOT NULL,
+                            `start_date` date NOT NULL,
+                            `end_date` date NOT NULL,
+                            `days_run` char(7) NOT NULL,
+                            `stp_indicator` char(1) NOT NULL,
+                            `train_status` char(1) DEFAULT NULL,
+                            `bank_holiday_runs` char(1) DEFAULT NULL,
+                            `train_category` char(2) DEFAULT NULL,
+                            `signal_headcode` char(4) DEFAULT NULL,
+                            `operator` char(2) DEFAULT NULL,
+                            `retail_headcode` char(4) DEFAULT NULL,
+                            `train_service_code` char(8) DEFAULT NULL,
+                            `portion_id` char(1) DEFAULT NULL,
+                            `power_type` char(3) DEFAULT NULL,
+                            `timing_load` varchar(4) DEFAULT NULL,
+                            `planned_speed` smallint(5) unsigned DEFAULT NULL,
+                            `operating_characteristics` varchar(6) DEFAULT NULL,
+                            `has_first_class` char(1) DEFAULT NULL,
+                            `sleeper` char(1) DEFAULT NULL,
+                            `reservations` char(1) DEFAULT NULL,
+                            `catering` char(2) DEFAULT NULL,
+                            `origin` varchar(7) DEFAULT NULL,
+                            `departure_time` time DEFAULT NULL,
+                            `destination` varchar(7) DEFAULT NULL,
+                            `arrival_time` time DEFAULT NULL,
+                            `created_time` datetime NOT NULL,
+                            PRIMARY KEY (`schedule_uuid`),
+                            UNIQUE KEY `schedule_unique` (`train_uid`,`start_date`,`end_date`,`days_run`,`stp_indicator`),
+                            KEY `schedule_origin_IDX` (`origin`,`departure_time`) USING BTREE,
+                            KEY `schedule_destination_IDX` (`destination`,`arrival_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `schedule_association`
 --
 
@@ -304,14 +394,113 @@ CREATE TABLE `schedule_association` (
                                         `end_date` date NOT NULL,
                                         `assoc_days` char(7) NOT NULL,
                                         `stp_indicator` char(1) NOT NULL,
-                                        `assoc_date` char(1) DEFAULT NULL,
+                                        `assoc_date` tinyint(1) DEFAULT NULL,
                                         `assoc_location` char(7) DEFAULT NULL,
                                         `base_suffix` char(1) DEFAULT NULL,
                                         `assoc_suffix` varchar(100) DEFAULT NULL,
                                         `assoc_category` char(1) DEFAULT NULL,
                                         `assoc_type` char(1) DEFAULT NULL,
                                         `created_date` datetime NOT NULL,
-                                        PRIMARY KEY (`base_uid`,`assoc_uid`,`start_date`,`end_date`,`assoc_days`,`stp_indicator`)
+                                        PRIMARY KEY (`base_uid`,`assoc_uid`,`start_date`,`end_date`,`assoc_days`,`stp_indicator`),
+                                        KEY `schedule_association_assoc_uid_IDX` (`assoc_uid`,`base_uid`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `schedule_details`
+--
+
+DROP TABLE IF EXISTS `schedule_details`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule_details` (
+                                    `schedule_uuid` binary(16) NOT NULL,
+                                    `entry_seq` smallint(5) unsigned NOT NULL,
+                                    `location` varchar(7) DEFAULT NULL,
+                                    `location_instance` tinyint(3) unsigned DEFAULT NULL,
+                                    `arrival_time` time DEFAULT NULL,
+                                    `departure_time` time DEFAULT NULL,
+                                    `pass_time` time DEFAULT NULL,
+                                    `public_arrival_time` time DEFAULT NULL,
+                                    `public_departure_time` time DEFAULT NULL,
+                                    `platform` varchar(3) DEFAULT NULL,
+                                    `line` varchar(3) DEFAULT NULL,
+                                    `path` varchar(3) DEFAULT NULL,
+                                    `engineering_allowance` time DEFAULT NULL,
+                                    `pathing_allowance` time DEFAULT NULL,
+                                    `performance_allowance` time DEFAULT NULL,
+                                    PRIMARY KEY (`schedule_uuid`,`entry_seq`),
+                                    CONSTRAINT `schedule_details_schedule_FK` FOREIGN KEY (`schedule_uuid`) REFERENCES `schedule` (`schedule_uuid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `schedule_map`
+--
+
+DROP TABLE IF EXISTS `schedule_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule_map` (
+                                `train_uid` char(6) NOT NULL,
+                                `schedule_date` date NOT NULL,
+                                `schedule_uuid` binary(16) NOT NULL,
+                                `updated_date` datetime DEFAULT NULL,
+                                PRIMARY KEY (`train_uid`,`schedule_date`),
+                                KEY `schedule_map_schedule_FK` (`schedule_uuid`),
+                                KEY `schedule_map_schedule_date_IDX` (`schedule_date`,`train_uid`) USING BTREE,
+                                CONSTRAINT `schedule_map_schedule_FK` FOREIGN KEY (`schedule_uuid`) REFERENCES `schedule` (`schedule_uuid`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `schedule_map_final`
+--
+
+DROP TABLE IF EXISTS `schedule_map_final`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `schedule_map_final` (
+                                      `train_uid` char(6) NOT NULL,
+                                      `schedule_date` date NOT NULL,
+                                      `schedule_uuid` binary(16) NOT NULL,
+                                      PRIMARY KEY (`train_uid`,`schedule_date`),
+                                      KEY `schedule_map_schedule_FK` (`schedule_uuid`) USING BTREE,
+                                      KEY `schedule_map_schedule_date_IDX` (`schedule_date`,`train_uid`) USING BTREE,
+                                      CONSTRAINT `schedule_map_schedule_FK_copy` FOREIGN KEY (`schedule_uuid`) REFERENCES `schedule` (`schedule_uuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `stared_schedule`
+--
+
+DROP TABLE IF EXISTS `stared_schedule`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stared_schedule` (
+                                   `user_id` int(10) unsigned NOT NULL,
+                                   `schedule_id` binary(16) NOT NULL,
+                                   `created_time` datetime DEFAULT NULL,
+                                   PRIMARY KEY (`user_id`,`schedule_id`),
+                                   KEY `stared_schedule_schedule_id_IDX` (`schedule_id`,`user_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `stomp_failed_message`
+--
+
+DROP TABLE IF EXISTS `stomp_failed_message`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `stomp_failed_message` (
+                                        `message_id` binary(16) NOT NULL,
+                                        `message_date` datetime(3) NOT NULL,
+                                        `error_source` varchar(255) NOT NULL,
+                                        `error_trace` text DEFAULT NULL,
+                                        `message_body` text DEFAULT NULL,
+                                        PRIMARY KEY (`message_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -332,8 +521,48 @@ CREATE TABLE `tiploc` (
                           PRIMARY KEY (`tiploc_code`),
                           KEY `tiploc_nalco_IDX` (`nalco`) USING BTREE,
                           KEY `tiploc_stanox_IDX` (`stanox`) USING BTREE,
-                          KEY `tiploc_crs_code_IDX` (`crs_code`) USING BTREE
+                          KEY `tiploc_crs_code_IDX` (`crs_code`) USING BTREE,
+                          FULLTEXT KEY `tiploc_tps_description_IDX` (`tps_description`),
+                          FULLTEXT KEY `tiploc_description_IDX` (`description`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `tiploc_group`
+--
+
+DROP TABLE IF EXISTS `tiploc_group`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `tiploc_group` (
+                                `tiploc_group_id` int(10) unsigned NOT NULL,
+                                `tiploc_code` varchar(7) NOT NULL,
+                                `priority` smallint(6) DEFAULT 0,
+                                PRIMARY KEY (`tiploc_group_id`,`tiploc_code`),
+                                KEY `tiploc_group_tiploc_code_IDX` (`tiploc_code`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin COMMENT='This table manually group multiple TIPLOC code';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `train_operator`
+--
+
+DROP TABLE IF EXISTS `train_operator`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `train_operator` (
+                                  `operator_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                                  `priority` smallint(6) NOT NULL DEFAULT 0,
+                                  `name` varchar(100) DEFAULT NULL,
+                                  `business_code` char(2) DEFAULT NULL,
+                                  `sector_code` char(2) DEFAULT NULL,
+                                  `atoc_code` varchar(2) DEFAULT NULL,
+                                  PRIMARY KEY (`operator_id`),
+                                  KEY `train_operator_business_code_IDX` (`business_code`) USING BTREE,
+                                  KEY `train_operator_sector_code_IDX` (`sector_code`) USING BTREE,
+                                  KEY `train_operator_atoc_code_IDX` (`atoc_code`) USING BTREE,
+                                  KEY `train_operator_name_IDX` (`name`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=223 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -356,7 +585,40 @@ CREATE TABLE `user` (
                         `last_failed_login` datetime DEFAULT NULL,
                         PRIMARY KEY (`user_id`),
                         UNIQUE KEY `users_username_IDX` (`username`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=ascii COLLATE=ascii_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=ascii COLLATE=ascii_general_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_attribute`
+--
+
+DROP TABLE IF EXISTS `user_attribute`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_attribute` (
+                                  `attribute_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                                  `attribute_name` varchar(100) NOT NULL,
+                                  `default_value` varchar(255) DEFAULT NULL,
+                                  PRIMARY KEY (`attribute_id`),
+                                  UNIQUE KEY `user_attribute_unique` (`attribute_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_attribute_value`
+--
+
+DROP TABLE IF EXISTS `user_attribute_value`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_attribute_value` (
+                                        `user_id` int(10) unsigned NOT NULL,
+                                        `attribute_id` int(10) unsigned NOT NULL,
+                                        `attribute_value` varchar(255) NOT NULL,
+                                        `updated_by` int(10) unsigned DEFAULT NULL,
+                                        `updated_date` datetime DEFAULT NULL,
+                                        PRIMARY KEY (`user_id`,`attribute_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -373,6 +635,24 @@ CREATE TABLE `user_permission` (
                                    KEY `user_permission_permission_FK` (`permission_id`),
                                    CONSTRAINT `user_permission_permission_FK` FOREIGN KEY (`permission_id`) REFERENCES `permission` (`permission_id`) ON DELETE CASCADE ON UPDATE CASCADE,
                                    CONSTRAINT `user_permission_user_FK` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_preference`
+--
+
+DROP TABLE IF EXISTS `user_preference`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_preference` (
+                                   `user_id` int(10) unsigned NOT NULL,
+                                   `pref_name` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                                   `pref_value` text DEFAULT NULL,
+                                   `update_date` datetime NOT NULL,
+                                   PRIMARY KEY (`user_id`,`pref_name`),
+                                   KEY `user_preference_preference_FK` (`pref_name`),
+                                   CONSTRAINT `user_preference_preference_FK` FOREIGN KEY (`pref_name`) REFERENCES `preference` (`pref_name`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -426,6 +706,36 @@ CREATE TABLE `user_role` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Temporary table structure for view `v_auto_tiploc_group`
+--
+
+DROP TABLE IF EXISTS `v_auto_tiploc_group`;
+/*!50001 DROP VIEW IF EXISTS `v_auto_tiploc_group`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `v_auto_tiploc_group` AS SELECT
+                                                  NULL AS `given_code`,
+                                                  NULL AS `group_member` */;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary table structure for view `v_user_attribute_value`
+--
+
+DROP TABLE IF EXISTS `v_user_attribute_value`;
+/*!50001 DROP VIEW IF EXISTS `v_user_attribute_value`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8mb4;
+/*!50001 CREATE VIEW `v_user_attribute_value` AS SELECT
+                                                     NULL AS `user_id`,
+                                                     NULL AS `attribute_id`,
+                                                     NULL AS `attribute_name`,
+                                                     NULL AS `attribute_value`,
+                                                     NULL AS `updated_by`,
+                                                     NULL AS `updated_date` */;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Dumping routines for database 'nrinfo'
 --
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
@@ -451,12 +761,49 @@ begin
                when 6 then '______1'
                else null
         end;
-end ;;
+end
+;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
 /*!50003 SET character_set_results = @saved_cs_results */ ;
 /*!50003 SET collation_connection  = @saved_col_connection */ ;
+
+--
+-- Final view structure for view `v_auto_tiploc_group`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_auto_tiploc_group`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+    /*!50013 DEFINER=`nrinfo`@`%` SQL SECURITY DEFINER */
+    /*!50001 VIEW `v_auto_tiploc_group` AS select `t1`.`tiploc_code` AS `given_code`,`t2`.`tiploc_code` AS `group_member` from (`tiploc` `t1` join `tiploc` `t2` on(`t1`.`nalco` is not null and `t1`.`nalco` = `t2`.`nalco`)) union select `t1`.`tiploc_code` AS `tiploc_code`,`t2`.`tiploc_code` AS `tiploc_code` from (`tiploc` `t1` join `tiploc` `t2` on(`t1`.`stanox` is not null and `t1`.`stanox` = `t2`.`stanox`)) union select `t1`.`tiploc_code` AS `tiploc_code`,`t2`.`tiploc_code` AS `tiploc_code` from (`tiploc` `t1` join `tiploc` `t2` on(`t1`.`crs_code` is not null and `t1`.`crs_code` = `t2`.`crs_code`)) union select `t1`.`tiploc_code` AS `given_code`,`t2`.`tiploc_code` AS `group_member` from (`tiploc_group` `t1` join `tiploc_group` `t2` on(`t1`.`tiploc_group_id` = `t2`.`tiploc_group_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_user_attribute_value`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_user_attribute_value`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+    /*!50013 DEFINER=`nrinfo`@`%` SQL SECURITY DEFINER */
+    /*!50001 VIEW `v_user_attribute_value` AS select `uav`.`user_id` AS `user_id`,`uav`.`attribute_id` AS `attribute_id`,`ua`.`attribute_name` AS `attribute_name`,ifnull(`uav`.`attribute_value`,`ua`.`default_value`) AS `attribute_value`,`uav`.`updated_by` AS `updated_by`,`uav`.`updated_date` AS `updated_date` from (`user_attribute` `ua` left join `user_attribute_value` `uav` on(`ua`.`attribute_id` = `uav`.`attribute_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -467,4 +814,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2025-11-07 11:01:47
+-- Dump completed on 2026-09-22 14:00:26
