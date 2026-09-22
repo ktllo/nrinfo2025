@@ -152,6 +152,7 @@ public class ScheduleController {
             //Bad input
             return ResponseUtil.buildBadRequestResponse("Invalid date format");
         }
+        //TODO: Limit the past schedule search
         UUID scheduleUUID = null;
         try {
             scheduleUUID = scheduleService.getScheduleUUID(uid, parsedDate);

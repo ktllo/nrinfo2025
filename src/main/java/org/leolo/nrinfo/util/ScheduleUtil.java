@@ -2,6 +2,7 @@ package org.leolo.nrinfo.util;
 
 import java.sql.Time;
 import java.time.Duration;
+import java.util.ArrayList;
 
 public class ScheduleUtil {
     public static Time parseTime(String time) {
@@ -64,11 +65,55 @@ public class ScheduleUtil {
             }
         }
         if (runsCount >= 4) {
-           notRuns.append("X");
-           return notRuns.toString();
+            notRuns.append("X");
+            return notRuns.toString();
         } else {
             runs.append("O");
             return runs.toString();
+        }
+    }
+    public static String pettyFormatDaysRunsMasks(String mask) {
+        if (mask == null || mask.length() != 7) {
+            throw new IllegalArgumentException("Invalid mask: " + mask);
+        }
+        int runsCount = 0;
+        /*
+         * Mask format:
+         * A seven-character field; character 1 represents Monday, character 7 represents Sunday.
+         * A 1 in a character position means that the service runs on that day, while a 0 means that it does not.
+         *
+         * Note that in this comment, the character index is 1-index
+         */
+
+        ArrayList<String> runs = new ArrayList<>();
+        ArrayList<String> notRuns = new ArrayList<>();
+        char[] chars = mask.toCharArray();
+        (chars[0] == '0' ? notRuns : runs).add("Monday");
+        (chars[1] == '0' ? notRuns : runs).add("Tuesday");
+        (chars[2] == '0' ? notRuns : runs).add("Wednesday");
+        (chars[3] == '0' ? notRuns : runs).add("Thursday");
+        (chars[4] == '0' ? notRuns : runs).add("Friday");
+        (chars[5] == '0' ? notRuns : runs).add("Saturday");
+        (chars[6] == '0' ? notRuns : runs).add("Sunday");
+        for (char c : chars) {
+            if (c == '1') {
+                runsCount++;
+            }
+        }
+        if (runsCount == 0) {
+            return "Never runs";
+        } else if (runsCount == 1) {
+            //Only runs on 1 day
+            return "Runs on " + runs.getFirst() + " only";
+        } else if (runsCount < 4) {
+            return "Runs on " + MiscUtil.formatList(runs, ", ", " and ") + " only";
+        } else if (runsCount == 6) {
+            //Only not runs on 1 day
+            return "Runs except " + notRuns.getFirst() + " only";
+        } else if (runsCount == 7) {
+            return "Runs everyday";
+        } else {
+            return "Runs except " + MiscUtil.formatList(notRuns, ", ", " and ") + " only";
         }
     }
 

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title th:text="${title}"></title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script th:replace="~{fragments/basic.html :: jqueryUI}"></script>
+    <script language="JavaScript" src="/lib/moment.js"></script>
+    <script src="/scripts/main.js"></script>
+    <script>
+        function toggle_additional_info() {
+            if ($('#additional_info').is(':hidden')) {
+                $('#additional_info').show();
+                $('#additional_info_control').text('Hide additional info');
+            } else {
+                $('#additional_info').hide();
+                $('#additional_info_control').text('Show additional info');
+            }
+        }
+    </script>
+    <script th:if="${hasPass}">
+        function toggle_pass() {
+            if ($('#toggle_pass_type').text() === 'Hide') {
+                $('#toggle_pass_type').text('Show');
+                $('.pass').hide()
+            } else {
+                $('#toggle_pass_type').text('Hide');
+                $('.pass').show()
+            }
+        }
+    </script>
+    <style>
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+        div.container {
+            border: 1px solid orange;
+            padding: 10px;
+        }
+
+        #schedule_table th {
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        tr.pass {
+            font-style: italic;
+            color: darkgray;
+            /*
+            display: none;
+             */
+        }
+
+        tr.schedule_entry {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid orange;
+            border-top: 1px solid orange;
+        }
+
+        span.crs {
+            font-size: small;
+            border: 1px solid salmon;
+            padding: 1px;
+        }
+        span.line {
+            font-size: small;
+            border: 1px solid red;
+            padding: 1px;
+        }
+        span.path {
+            font-size: small;
+            border: 1px solid blue;
+            padding: 1px;
+        }
+
+        span.allowance {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid black;
+            color: black;
+            width: 2em;
+            height: 2em;
+            margin: 0.5ex;
+        }
+
+        span.engallowance {
+            /* Box time */
+            border-radius: 0;
+        }
+
+        span.pathallowance {
+            /* Circle Time */
+            border-radius: 50%;
+        }
+
+        span.perfallowance {
+            /* Diamond Time */
+            transform: rotate(45deg);
+        }
+
+        span.perfallowance span {
+            transform: rotate(-45deg);
+        }
+
+        th abbr {
+            font-size: small;
+            font-variant-caps: all-small-caps;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            background-color: lightgray;
+            z-index: 1;
+        }
+
+        td.r_border {
+            border-right: 1px solid lightgray;
+        }
+
+        td.dtime {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div th:replace="~{fragments/basic.html :: header}"></div>
+    <h1>
+        <span th:text="${headcode}"></span> <span th:text="${originDepartTime}"></span>
+        <span th:text="${origin}"></span> to <span th:text="${destination}"></span>
+    </h1>
+    <div style="padding: 10px">
+        <div id="additional_info_container" class="container">
+            <div id="additional_info" style="display: none;">
+                <div>
+                    <span th:text="${train_category}"></span>
+                    <span th:text='${train_category != null?" service operated by ":"Operated by "}'></span>
+                    <span th:text="${operator}"></span>
+                </div>
+                <div th:if="${one_day_schedule}">
+                    Runs on <span th:text="${schedule_start_date}"></span> only
+                </div>
+                <div th:unless="${one_day_schedule}">
+                    Runs on <span th:text="${schedule_start_date}"></span> to <span th:text="${schedule_end_date}"></span>
+                </div>
+                <div th:text="${schedule_runs_day}"></div>
+            </div>
+            <div id="additional_info_control" onclick="toggle_additional_info();" style="font-size: smaller">
+                Show additional information
+            </div>
+        </div>
+    </div>
+    <table style="width: 100%" id="schedule_table">
+        <thead>
+            <tr>
+                <th colspan="3">Location</th>
+                <th colspan="2">GBTT</th>
+                <th colspan="2">WTT</th>
+                <th colspan="3">Allowance</th>
+            </tr>
+            <tr>
+                <th colspan="2">&nbsp;</th>
+                <th>Platform</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th>Arrival</th>
+                <th>Departure</th>
+                <th><abbr title="Engineering">Eng.</abbr></th>
+                <th><abbr title="Pathing">Path</abbr></th>
+                <th><abbr title="Performance">Perf.</abbr></th>
+            </tr>
+        </thead>
+        <tbody>
+            <th:block th:each="schedule : ${schedules}">
+                <tr th:classappend='${schedule.passOnly?"pass ":""}' class="schedule_entry">
+                    <td><span th:text="${schedule.stationName}" style="font-size: large"></span></td>
+                    <td>
+                        <span th:if="${schedule.crsCode!=null}" th:text="${schedule.crsCode}" class="crs"></span>
+                    </td>
+                    <td class="r_border">
+                        <span th:if="${schedule.pathIn!=null}">
+                            <span th:text="${schedule.pathIn}" class="path"></span>
+                            <span th:if="${schedule.platform != null || schedule.lineOut != null}">&#x25B6;</span>
+                        </span>
+                        <span th:text="${schedule.platform}"></span>
+                        <span th:if="${schedule.lineOut!=null}">
+                            <span th:if="${schedule.platform != null}">&#x25B6;</span>
+                            <span th:text="${schedule.lineOut}" class="line"></span>
+                        </span>
+                    </td>
+                    <td class="dtime"><span th:text="${schedule.gbttArrivalTime}"></span></td>
+                    <td class="r_border dtime"><span th:text="${schedule.gbttDepartureTime}"></span></td>
+                    <td class="dtime"><span th:text="${schedule.wttArrivalTime}"></span></td>
+                    <td class="r_border dtime"><span th:text="${schedule.wttDepartureTime}"></span></td>
+                    <td class="dtime" th:text="${schedule.engineeringAllowance}"></td>
+                    <td class="dtime" th:text="${schedule.pathingAllowance}"></td>
+                    <td class="dtime" th:text="${schedule.performanceAllowance}"></td>
+                </tr>
+            </th:block>
+        </tbody>
+    </table>
+    <div onclick="toggle_pass()" th:if="${hasPass}">
+        <span id="toggle_pass_type">Hide</span> passes
+    </div>
+    <div th:replace="~{fragments/basic.html :: footer}"></div>
+</body>
+</html>

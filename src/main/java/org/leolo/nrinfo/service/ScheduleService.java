@@ -543,7 +543,7 @@ public class ScheduleService {
         return filteredSearchResults;
     }
 
-    private TrainScheduleSummary fillSummary(org.leolo.nrinfo.model.Schedule schedule, Date parsedDate) throws SQLException {
+    public TrainScheduleSummary fillSummary(org.leolo.nrinfo.model.Schedule schedule, Date parsedDate) throws SQLException {
         TrainScheduleSummary trainSchedule = new TrainScheduleSummary();
         TreeSet<String> tiplocs = new TreeSet<>();
         for (ScheduleDetail sd: schedule.getDetailList()) {
@@ -591,7 +591,7 @@ public class ScheduleService {
         return trainSchedule;
     }
 
-    private TrainScheduleEntry fillEntryInfo(ScheduleDetail detail, Date scheduleDate) {
+    public TrainScheduleEntry fillEntryInfo(ScheduleDetail detail, Date scheduleDate) {
         SimpleDateFormat fullTime = new SimpleDateFormat("HH:mm:ss");
         TrainScheduleEntry entry = new TrainScheduleEntry();
         Tiploc tiploc = tiplocService.getTiplocByTiplocCode(detail.getLocation());

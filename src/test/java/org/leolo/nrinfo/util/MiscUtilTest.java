@@ -5,8 +5,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -105,5 +107,21 @@ public class MiscUtilTest {
         assertNull(MiscUtil.max(null));
         assertNull(MiscUtil.max());
         assertNull(MiscUtil.max(new String[0]));
+    }
+
+    @Test
+    public void testFormatList() {
+        assertEquals("A, B, C, D, E and F", MiscUtil.formatList(List.of("A", "B", "C", "D", "E", "F"), ", ", " and "));
+        assertEquals("A, B, C, D, E or F", MiscUtil.formatList(List.of("A", "B", "C", "D", "E", "F"), ", ", " or "));
+        assertEquals("A,B,C,D,E and F", MiscUtil.formatList(List.of("A", "B", "C", "D", "E", "F"), ",", " and "));
+        assertEquals("", MiscUtil.formatList(new ArrayList<String>(), ", ", " and "));
+        assertEquals("", MiscUtil.formatList(null, ", ", " and "));
+        assertEquals("A", MiscUtil.formatList(List.of("A"), ", ", " and "));
+        assertEquals("A and B", MiscUtil.formatList(List.of("A", "B"), ", ", " and "));
+        assertEquals("A, B and C", MiscUtil.formatList(List.of("A", "B", "C"), ", ", " and "));
+        assertEquals(", B and C", MiscUtil.formatList(List.of("", "B", "C"), ", ", " and "));
+        assertEquals("A,  and C", MiscUtil.formatList(List.of("A", "", "C"), ", ", " and "));
+        assertThrows(NullPointerException.class, () -> MiscUtil.formatList(List.of("A", null, "C"), ", ", " and "));
+
     }
 }

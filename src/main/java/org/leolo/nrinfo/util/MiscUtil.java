@@ -3,6 +3,8 @@ package org.leolo.nrinfo.util;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class MiscUtil {
 
@@ -65,5 +67,21 @@ public class MiscUtil {
             }
         }
         return max;
+    }
+
+    public static String formatList(List<? extends CharSequence> list, String delim, String lastDelim) {
+        if (list == null || list.isEmpty()) {
+            return "";
+        }
+        if (list.size() == 1) {
+            return list.getFirst().toString();
+        }
+        if (list.size() == 2) {
+            return list.getFirst().toString() + lastDelim + list.getLast().toString();
+        }
+        return list.stream()
+                .limit(list.size() - 1)
+                .collect(Collectors.joining(delim))
+                + lastDelim + list.getLast();
     }
 }

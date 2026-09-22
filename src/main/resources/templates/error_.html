@@ -16,6 +16,9 @@
     <p th:if="${message != null}">
         Technical information: <span th:text="${message}"></span>
     </p>
+    <p th:if="${non_tech_message != null}" style="font-size: large;">
+        <span th:text="${non_tech_message}"></span>
+    </p>
     <p th:if="${smessage != null}">
         Technical information: <span th:text="${smessage}"></span>
     </p>

@@ -68,4 +68,22 @@ public class ScheduleUtilTest {
         assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.formatDaysRunsMasks("000000"));
     }
 
+    @Test void testPettyFormatDaysRunsMasks(){
+        //Commonly seen
+        assertEquals("Runs except Saturday and Sunday only",ScheduleUtil.pettyFormatDaysRunsMasks("1111100"));
+        assertEquals("Runs except Sunday only",ScheduleUtil.pettyFormatDaysRunsMasks("1111110"));
+        assertEquals("Runs on Sunday only",ScheduleUtil.pettyFormatDaysRunsMasks("0000001"));
+        assertEquals("Runs on Monday only",ScheduleUtil.pettyFormatDaysRunsMasks("1000000"));
+
+        //Additional Case
+        assertEquals("Runs on Monday, Tuesday and Wednesday only",ScheduleUtil.pettyFormatDaysRunsMasks("1110000"));
+        assertEquals("Runs on Thursday, Friday and Saturday only",ScheduleUtil.pettyFormatDaysRunsMasks("0001110"));
+
+        //Error case
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.pettyFormatDaysRunsMasks(""));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.pettyFormatDaysRunsMasks(null));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.pettyFormatDaysRunsMasks("00000000"));
+        assertThrows(IllegalArgumentException.class, () -> ScheduleUtil.pettyFormatDaysRunsMasks("000000"));
+    }
+
 }

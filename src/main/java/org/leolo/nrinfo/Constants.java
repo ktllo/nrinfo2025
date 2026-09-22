@@ -18,6 +18,10 @@ public class Constants {
         }
     }
 
+    public static class HTMLEntity {
+        public static final String FRAC_1_2 = "½";
+    }
+
     public static class Model {
         public static final String GENERIC_POPUP_MESSAGE = "generic_popup_message";
     }
