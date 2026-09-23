@@ -14,7 +14,7 @@ public class GenericPageController {
     }
 
     @GetMapping("/login")
-    public String login() {
+    public String login(Model model) {
         return "login";
     }
 

@@ -31,6 +31,7 @@
 <div th:replace="~{fragments/basic.html :: header}"></div>
 <div class="error" th:if="${error_message}" th:text="${error_message}"></div>
 <form th:action="@{/login}" method="post" onsubmit="return validateForm()">
+    <input type="hidden" id="destination" name="destination" th:value="${destination}" th:if="${destination!=null}"/>
     <table>
         <tr>
             <th><label for="username">Username</label> </th>

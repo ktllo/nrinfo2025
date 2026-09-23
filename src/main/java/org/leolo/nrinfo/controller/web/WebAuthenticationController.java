@@ -29,7 +29,8 @@ public class WebAuthenticationController {
             @Deprecated ModelMap model,
             RedirectAttributes redirectAttributes,
             @RequestParam String username,
-            @RequestParam String password
+            @RequestParam String password,
+            @RequestParam(required = false, defaultValue = "") String destination
     ) {
         logger.info("doLogin: username={}, password=********", username);
         model.addAttribute("username", username);
@@ -41,11 +42,18 @@ public class WebAuthenticationController {
             redirectAttributes.addFlashAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, ar.getMessage());
 
             authLogger.info("SUCCESS;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
-            return "redirect:/";
+            if (destination==null || destination.isEmpty()) {
+                return "redirect:/";
+            } else if (destination.startsWith("/")) {
+                return "redirect:" + destination;
+            } else {
+                return "redirect:/" + destination;
+            }
         } else {
             //Rebind the username
             redirectAttributes.addFlashAttribute("username", username);
             redirectAttributes.addFlashAttribute("error_message", "Username or password is incorrect");
+            redirectAttributes.addFlashAttribute(Constants.Model.LOGIN_REDIRECT_DESTINATION, destination);
             authLogger.info("FAILED;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
             return "redirect:/login";
         }

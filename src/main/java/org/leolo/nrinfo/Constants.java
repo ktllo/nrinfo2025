@@ -24,6 +24,7 @@ public class Constants {
 
     public static class Model {
         public static final String GENERIC_POPUP_MESSAGE = "generic_popup_message";
+        public static final String LOGIN_REDIRECT_DESTINATION = "destination";
     }
 
     public static class CacheKey {
