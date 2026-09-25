@@ -13,6 +13,9 @@
 <div th:replace="~{fragments/basic.html :: header}"></div>
 <a href="/performance"><div class="tgroup">Real Time Performace</div></a>
 <a href="/schedule_search"><div class="tgroup">Search train schedule</div></a>
+<th:block th:if="${authStatus=='Y'}">
+    <a href="preference"><div class="tgroup">Your Preferences</div></a>
+</th:block>
 <div th:replace="~{fragments/basic.html :: footer}"></div>
 </body>
 </html>

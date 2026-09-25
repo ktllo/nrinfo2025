@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="/css/main.css">
+        <title>User Preference</title>
+        <script th:replace="~{fragments/basic.html :: jquery}"></script>
+        <script src="/scripts/main.js"></script>
+    </head>
+    <body>
+        <h1>Your Preference</h1>
+        <div th:replace="~{fragments/basic.html :: header}"></div>
+        <form action="/preference" method="post">
+            <table>
+                <tr th:each="pref:${preferences}">
+                    <td><label th:text="${pref.displayName}" th:for="|pref-${pref.preferenceName}|"></label></td>
+                    <td th:if="${pref.getOptions().isEmpty()}">
+                        <input type="text"
+                               th:name="|pref-${pref.preferenceName}|"
+                               th:id="|pref-${pref.preferenceName}|"
+                               th:value="${pref.actualValue}"
+                        />
+                    </td>
+                    <td th:if="${!pref.getOptions().isEmpty() && pref.getOptions().size() <= 3}">
+                        <span th:each="option:${pref.options}">
+                            <input
+                                    type="radio"
+                                    th:name="|pref-${pref.preferenceName}|"
+                                    th:id="|pref-${pref.preferenceName}-${option.sequence}|"
+                                    th:value="${option.mappedValue}"
+                                    th:checked="${pref.actualValue == option.mappedValue}"/>
+                            <label th:text="${option.displayName}" th:for="|pref-${pref.preferenceName}-${option.sequence}|"></label>
+                        </span>
+                    </td>
+                    <td  th:if="${pref.getOptions().size() > 3}">
+                        <select
+                                th:name="|pref-${pref.preferenceName}|"
+                                th:id="|pref-${pref.preferenceName}|"
+                        >
+                            <option
+                                    th:each="option:${pref.options}"
+                                    th:value="${option.mappedValue}"
+                                    th:text="${option.displayName}"
+                                    th:selected="${pref.actualValue == option.mappedValue}">
+                            </option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <button type="submit">Save</button>
+                    </td>
+                </tr>
+            </table>
+        </form>
+        <div th:replace="~{fragments/basic.html :: footer}"></div>
+    </body>
+</html>
