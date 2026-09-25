@@ -645,7 +645,8 @@ public class ScheduleDao extends BaseDao {
                 //We can only get 1 row
                 if (rs.next()) {
                     Timestamp oldestDate = rs.getTimestamp(1);
-                    return oldestDate == null ? null : oldestDate.toInstant();
+                    log.debug("Cache for {} is {} old", date, oldestDate);
+                    return oldestDate == null ? Instant.EPOCH : oldestDate.toInstant();
                 }
             }
         }
