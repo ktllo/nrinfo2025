@@ -25,23 +25,34 @@ public class UserPreferenceService {
     @Autowired private UserPermissionService userPermissionService;
     @Autowired private UserPreferenceDao userPreferenceDao;
     @Autowired private PreferenceService preferenceService;
-    
-    public List<UserPreference> getAllUserPreferences() {
+
+    private Map<String, UserPreference> userPreferenceMap = null;
+
+    private synchronized void fillCache()  {
         int userId = userPermissionService.getUserId();
         if (userId == 0) {
             log.warn("User ID is 0");
-            return new ArrayList<>();
+            userPreferenceMap = new HashMap<>();
+            return;
         }
+        if (userPreferenceMap != null) {
+            return;
+        }
+        userPreferenceMap = new HashMap<>();
         try {
             List<UserPreference> list = userPreferenceDao.getAllUserPreferenceForUserByUserId(userId);
-            for(UserPreference userPreference : list) {
+            for (UserPreference userPreference : list) {
                 userPreference.setOptions(preferenceService.getUserPreferenceOptions(userPreference.getPreferenceName()));
+                userPreferenceMap.put(userPreference.getPreferenceName(), userPreference);
             }
-            return list;
         } catch (SQLException e) {
-            log.error("Error while retrieving user preferences", e);
-            throw new RuntimeException(e);
+            log.error(e.getMessage());
         }
+    }
+
+    public List<UserPreference> getAllUserPreferences() {
+        fillCache();
+        return new ArrayList<>(userPreferenceMap.values());
     }
 
     /**
@@ -64,8 +75,9 @@ public class UserPreferenceService {
             log.warn("User ID is 0");
             return false;
         }
+        fillCache();
         try {
-            UserPreference userPreference = userPreferenceDao.getUserPreferenceForUser(userId, preferenceName);
+            UserPreference userPreference = userPreferenceMap.get(preferenceName);
             if (userPreference == null) {
                 log.error("User Preference {} not found", preferenceName);
                 return false;
