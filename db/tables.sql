@@ -170,6 +170,20 @@ CREATE TABLE `job_output` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `manual_station_crs_map`
+--
+
+DROP TABLE IF EXISTS `manual_station_crs_map`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `manual_station_crs_map` (
+                                          `tiploc_code` varchar(7) NOT NULL,
+                                          `crs_code` char(3) NOT NULL,
+                                          PRIMARY KEY (`tiploc_code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `manual_station_display_name`
 --
 
@@ -285,7 +299,7 @@ CREATE TABLE `permission` (
                               `description` text DEFAULT NULL,
                               PRIMARY KEY (`permission_id`),
                               KEY `permission_permission_name_IDX` (`permission_name`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -303,6 +317,23 @@ CREATE TABLE `preference` (
                               `validation_class` varchar(1024) DEFAULT NULL,
                               `default_value` text DEFAULT NULL,
                               PRIMARY KEY (`pref_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `preference_option`
+--
+
+DROP TABLE IF EXISTS `preference_option`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `preference_option` (
+                                     `preference_name` varchar(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                                     `sequence` smallint(5) unsigned NOT NULL,
+                                     `display_value` varchar(100) NOT NULL,
+                                     `mapped_value` varchar(100) NOT NULL,
+                                     PRIMARY KEY (`preference_name`,`sequence`),
+                                     CONSTRAINT `preference_option_preference_FK` FOREIGN KEY (`preference_name`) REFERENCES `preference` (`pref_name`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -585,7 +616,7 @@ CREATE TABLE `user` (
                         `last_failed_login` datetime DEFAULT NULL,
                         PRIMARY KEY (`user_id`),
                         UNIQUE KEY `users_username_IDX` (`username`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=ascii COLLATE=ascii_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=ascii COLLATE=ascii_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -601,7 +632,7 @@ CREATE TABLE `user_attribute` (
                                   `default_value` varchar(255) DEFAULT NULL,
                                   PRIMARY KEY (`attribute_id`),
                                   UNIQUE KEY `user_attribute_unique` (`attribute_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -814,4 +845,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-22 14:00:26
+-- Dump completed on 2026-09-30 19:43:10

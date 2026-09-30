@@ -22,11 +22,14 @@ public class TiplocService {
     private TreeMap<String, Tiploc> tiplocCache = new TreeMap<>();
     private TreeMap<String, String> displayNameCache = new TreeMap<>();
 
+    private TreeMap<String, String> crsCache = new TreeMap<>();
+
     @Scheduled(fixedRate = 3600_000)
     public void clearCache() {
         logger.info("Clearing cache");
         tiplocCache = new TreeMap<>();
         displayNameCache = new TreeMap<>();
+        crsCache = new TreeMap<>();
     }
 
     public Tiploc getTiplocByTiplocCode(String tiplocCode) {
@@ -111,6 +114,27 @@ public class TiplocService {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public String getActualCrsCode(String tiplocCode) throws SQLException {
+        //Try to get it from cache
+        if (crsCache.containsKey(tiplocCode)) {
+            return crsCache.get(tiplocCode);
+        }
+        String crs = tiplocDao.getManualMappedCrsCode(tiplocCode);
+        if (crs == null) {
+            List<String> groupCrss = tiplocDao.getGroupCrsCodes(tiplocCode);
+            if (groupCrss.size() == 1) {
+                crs = groupCrss.getFirst();
+            } else {
+                crs = tiplocDao.getPreferredManualGroupCrsCode(tiplocCode);
+                if (crs == null && tiplocCache.containsKey(tiplocCode)) {
+                    crs = tiplocCache.get(tiplocCode).getCrsCode();
+                }
+            }
+        }
+        crsCache.put(tiplocCode, crs);
+        return crs;
     }
 
 }

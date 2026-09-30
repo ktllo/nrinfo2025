@@ -142,7 +142,7 @@ public class WebScheduleSearchController {
                 Tiploc tiploc = tiplocService.getTiplocByTiplocCode(scheduleEntry.getLocation());
                 se.setStationName(tiplocService.getDisplayNameByTiplocCode(scheduleEntry.getLocation()));
                 se.setPlatform(scheduleEntry.getPlatform());
-                se.setCrsCode(tiploc.getCrsCode());
+                se.setCrsCode(tiplocService.getActualCrsCode(scheduleEntry.getLocation()));
                 se.setGbttArrivalTime(formatTime(scheduleEntry.getPublicArrivalTime()));
                 se.setGbttDepartureTime(formatTime(scheduleEntry.getPublicDepartureTime()));
                 if (scheduleEntry.getPassTime() != null) {

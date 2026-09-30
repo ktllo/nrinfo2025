@@ -291,6 +291,92 @@ public class TiplocDao extends BaseDao{
         return tiplocs;
     }
 
+    public List<String> getGroupCrsCodes(String tiplocCode) throws SQLException {
+        List<String> groupCrsCodes = new ArrayList<>();
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            SELECT DISTINCT
+                                t.crs_code
+                            FROM tiploc t
+                            WHERE
+                                t.tiploc_code in (
+                                    SELECT v.group_member from v_auto_tiploc_group v
+                                    where v.given_code = ?
+                                    order by v.group_member
+                                )
+                                and t.crs_code is not null
+                            """
+                )
+        ) {
+            ps.setString(1, tiplocCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    groupCrsCodes.add(rs.getString(1));
+                }
+            }
+        }
+        return groupCrsCodes;
+    }
+
+    public String getManualMappedCrsCode(String tiplocCode) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            SELECT mscm.crs_code
+                            FROM
+                                v_auto_tiploc_group vatg
+                                JOIN manual_station_crs_map mscm ON vatg.group_member = mscm.tiploc_code
+                            WHERE
+                                vatg.given_code = ?
+                            """
+                )
+        ) {
+            ps.setString(1, tiplocCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+        return null;
+    }
+
+    public String getPreferredManualGroupCrsCode(String tiplocCode) throws SQLException {
+        try (
+                Connection connection = ds.getConnection();
+                PreparedStatement ps = connection.prepareStatement(
+                        """
+                            SELECT
+                                t.crs_code
+                            FROM
+                                tiploc_group tg
+                                JOIN tiploc t ON tg.tiploc_code = t.tiploc_code
+                            WHERE
+                                tg.tiploc_group_id IN (
+                                    SELECT
+                                        tgs.tiploc_group_id
+                                    FROM
+                                        tiploc_group tgs
+                                    WHERE
+                                        tgs.tiploc_code = ?
+                                )
+                            LIMIT 1
+                            """
+                )
+        ) {
+            ps.setString(1, tiplocCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+            }
+        }
+        return null;
+    }
+
     public List<String> findTiplocCodeByNalco(String nalco) throws SQLException {
         ArrayList<String> tiplocs = new ArrayList<>();
         try (
