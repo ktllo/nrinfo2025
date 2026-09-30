@@ -27,6 +27,10 @@ public class UserPreferenceService {
 
     private Map<String, UserPreference> userPreferenceMap = null;
 
+    public void clearCache() {
+        userPreferenceMap = null;
+    }
+
     private synchronized void fillCache()  {
         int userId = userPermissionService.getUserId();
         if (userId == 0) {

@@ -57,9 +57,9 @@ public class WebUserPreferenceController {
             redirectAttributes.addFlashAttribute(Constants.Model.LOGIN_REDIRECT_DESTINATION, "/preference");
             return "redirect:/login";
         }
-        //TODO: Update the data
         log.debug("Request keys are {}", parameters.keySet());
         Set<String> preferenceName = preferenceService.getAllUserPreferenceNames();
+        boolean success = true;
         for (String prefName : preferenceName) {
             if (parameters.containsKey("pref-"+prefName)) {
                 if (userPreferenceService.updateUserPreference(prefName, parameters.get("pref-"+prefName))) {
@@ -67,11 +67,18 @@ public class WebUserPreferenceController {
                 } else {
                     log.warn("Preference {} not updated", prefName);
                     model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Unable to update preference");
+                    success = false;
                     break;
                 }
             }
         }
-        return preference(model, redirectAttributes);
+        if (success) {
+            model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Preference successfully updated");
+        }
+        userPreferenceService.clearCache();
+        List<UserPreference> preferenceList = userPreferenceService.getAllUserPreferences();
+        model.addAttribute("preferences", preferenceList);
+        return "preference";
     }
 
 
