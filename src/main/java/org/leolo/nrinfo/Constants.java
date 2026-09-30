@@ -43,6 +43,10 @@ public class Constants {
         public static final String PURGE_CACHE = "PURGE_CONF_CACHE";
     }
 
+    public static class UserPreferences {
+        public static final String SHOW_SCHEDULE_PASS = "schedule_show_pass";
+    }
+
     public static class Configuration {
         public static final String ALLOW_REGISTER = "allow_register";
     }

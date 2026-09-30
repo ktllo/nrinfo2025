@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -126,5 +125,130 @@ public class UserPreferenceService {
             log.error("Invalid user preference validation class", e);
         }
         return false;
+    }
+
+    private String doGetPreference(String preferenceName) {
+        if (userPreferenceMap == null) {
+            fillCache();
+        }
+        UserPreference userPreference = userPreferenceMap.get(preferenceName);
+        if (userPreference == null) {
+            log.error("User Preference {} not found", preferenceName);
+            return null;
+        }
+        return userPreference.getActualValue();
+    }
+
+    /**
+     * Gets a boolean preference value.
+     * <p>
+     * If the preference is not set, or its value is not recognised as either
+     * {@code true} or {@code false}, the supplied default value is returned.
+     * The following values are recognised as {@code true}: {@code "true"},
+     * {@code "yes"}, {@code "y"}, {@code "on"}, and {@code "1"}.
+     * The following values are recognised as {@code false}: {@code "false"},
+     * {@code "no"}, {@code "n"}, {@code "off"}, and {@code "0"}.
+     * String comparisons are case-insensitive.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @param defaultValue the value to return if the preference is not set or
+     *                     its value is not recognised
+     * @return the boolean preference value, or {@code defaultValue} if the
+     *         preference is not set or its value is not recognised
+     */
+    public boolean getBoolean(String preferenceName, boolean defaultValue) {
+        String value = doGetPreference(preferenceName);
+        if (value == null) {
+            return defaultValue;
+        }
+         if (
+                 value.equalsIgnoreCase("true") ||
+                 value.equalsIgnoreCase("yes") ||
+                 value.equalsIgnoreCase("y") ||
+                 value.equalsIgnoreCase("on") ||
+                 value.equals("1")
+         ) {
+             return true;
+         } else if (
+                 value.equalsIgnoreCase("false") ||
+                 value.equalsIgnoreCase("no") ||
+                 value.equalsIgnoreCase("n") ||
+                 value.equalsIgnoreCase("off") ||
+                 value.equals("0")
+         ) {
+             return false;
+         }
+         return defaultValue;
+    }
+
+    /**
+     * Gets a boolean preference value, using {@code false} as the default value.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @return the boolean preference value, or {@code false} if the preference
+     *         is not set or its value is not recognised
+     *
+     * @see #getBoolean(String, boolean)
+     */
+    public boolean getBoolean(String preferenceName) {
+        return getBoolean(preferenceName, false);
+    }
+
+    /**
+     * Gets an integer preference value.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @param defaultValue the value to return if the preference is not set
+     * @return the integer preference value, or {@code defaultValue} if the
+     *         preference is not set
+     * @throws NumberFormatException if the preference value is not a valid integer
+     */
+    public int getInt(String preferenceName, int defaultValue) {
+        String value = doGetPreference(preferenceName);
+        if (value == null) {
+            return defaultValue;
+        }
+        return Integer.parseInt(value);
+    }
+
+    /**
+     * Gets an integer preference value, using {@code 0} as the default value.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @return the integer preference value, or {@code 0} if the preference is not
+     *         set
+     * @throws NumberFormatException if the preference value is not a valid integer
+     * @see #getInt(String, int)
+     */
+    public int getInt(String preferenceName) {
+        return getInt(preferenceName, 0);
+    }
+
+    /**
+     * Gets a string preference value.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @param defaultValue the value to return if the preference is not set
+     * @return the string preference value, or {@code defaultValue} if the
+     *         preference is not set
+     */
+    public String getString(String preferenceName, String defaultValue) {
+        String value = doGetPreference(preferenceName);
+        if (value == null) {
+            return defaultValue;
+        }
+        return value;
+    }
+
+    /**
+     * Gets a string preference value, using {@code null} as the default value.
+     *
+     * @param preferenceName the name of the preference to retrieve
+     * @return the string preference value, or {@code null} if the preference is
+     *         not set
+     * @see #getString(String, String)
+     */
+    public String getString(String preferenceName) {
+        return getString(preferenceName, null);
     }
 }
