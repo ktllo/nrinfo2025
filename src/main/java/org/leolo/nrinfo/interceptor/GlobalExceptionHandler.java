@@ -12,12 +12,5 @@ public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Object> handleAllExceptions(Exception ex) {
-        // ERROR: This only logs the message string, not the stack trace.
-        log.error("An error occurred: {}", ex.getMessage(), ex);
 
-
-        return new ResponseEntity<>("Error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
-    }
 }

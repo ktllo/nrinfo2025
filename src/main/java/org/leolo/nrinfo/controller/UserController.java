@@ -56,7 +56,7 @@ public class UserController {
                 authLogger.info("SUCCESS;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
                 return new ResponseEntity<>(map, HttpStatus.OK);
             }
-        } catch (SQLException e) {
+        } catch (Exception e) {
             TreeMap<String, String> map = new TreeMap<>();
             map.put("success", "false");
             map.put("message", e.getMessage());

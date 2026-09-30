@@ -6,6 +6,10 @@ public class Constants {
 
     public static final String DEFAULT_TIMEZONE_NAME = "Europe/London";
     public static final ZoneId DEFAULT_TIMEZONE = ZoneId.of(DEFAULT_TIMEZONE_NAME);
+
+    public static final int INVITE_KEY_LENGTH = 16;
+    public static final int MIN_PASSWORD_LENGTH = 8;
+    public static final int MAX_PASSWORD_LENGTH = 72;
     public static class EpsgCode {
         public static final int WGS84 = 4326;
         public static final int UKOS = 27700;
@@ -32,6 +36,15 @@ public class Constants {
         public static final String OPERATOR_SUMMARY_TEMPLATE = "perfsummary.operator.%s";
 
         public static final String OPERATOR_NAME_TEMPLATE = "operator.name.%s";
+    }
+
+    public static class Permission {
+        public static final String GENERATE_INVITE_KEYS = "INVITE_USER";
+        public static final String PURGE_CACHE = "PURGE_CONF_CACHE";
+    }
+
+    public static class Configuration {
+        public static final String ALLOW_REGISTER = "allow_register";
     }
 
     public static class SQLTypes {

@@ -1,18 +1,28 @@
 package org.leolo.nrinfo.controller.web;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import org.leolo.nrinfo.Constants;
+import org.leolo.nrinfo.dto.request.UserRegister;
+import org.leolo.nrinfo.exception.ValidationException;
+import org.leolo.nrinfo.exception.WebValidationException;
 import org.leolo.nrinfo.model.AuthenticationResult;
+import org.leolo.nrinfo.service.ConfigurationService;
 import org.leolo.nrinfo.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.sql.SQLException;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Controller
 public class WebAuthenticationController {
@@ -22,6 +32,8 @@ public class WebAuthenticationController {
     private final Logger authLogger = LoggerFactory.getLogger("auth");
     @Autowired
     private UserService userService;
+    @Autowired
+    private ConfigurationService configurationService;
 
     @RequestMapping(path = "/login", method = RequestMethod.POST)
     public String doLogin(
@@ -64,5 +76,88 @@ public class WebAuthenticationController {
         request.getSession().invalidate();
         redirectAttributes.addFlashAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Logout success!");
         return "redirect:/";
+    }
+
+    @GetMapping("/register")
+    public String doRegister(HttpServletRequest request, RedirectAttributes redirectAttributes, Model model) {
+        fillRegistrationParameters(model);
+        return "register";
+    }
+
+    @PostMapping("/register")
+    public String doRegister(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            Model model,
+            @RequestParam Map<String, String> attributes
+    ) {
+        boolean needInvite = !configurationService.getBoolean(Constants.Configuration.ALLOW_REGISTER);
+        String username = attributes.get("username");
+        String password = attributes.get("password");
+        String confirmPassword = attributes.get("confirm_password");
+        String inviteKey = null;
+        if (needInvite) {
+            inviteKey = attributes.get("invite_key");
+        }
+        if (username == null || password == null || confirmPassword == null) {
+            logger.info("Some fields are missing or incorrect (un/p/cp): {}/{}/{}", username==null, password==null, confirmPassword==null);
+        }
+        if (!password.equals(confirmPassword)) {
+            logger.warn("passwords do not match");
+            model.addAttribute("msg_password", "Passwords do not match");
+            fillRegistrationParameters(model);
+            model.addAttribute("username", username);
+            model.addAttribute("invite_key", inviteKey);
+            return "register";
+        }
+        UserRegister ur = new UserRegister();
+        ur.setUsername(username);
+        ur.setPassword(password);
+        ur.setInviteKey(inviteKey);
+        try {
+            AuthenticationResult ar = userService.doRegisterUser(ur);
+            if (ar.isSuccess()) {
+                request.getSession().setAttribute(Constants.Identifier.Session.USER_ID, ar.getUserId());
+                model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Registration successful.");
+                return "redirect:/";
+            }
+        } catch (SQLException e) {
+            fillRegistrationParameters(model);
+            model.addAttribute("username", username);
+            model.addAttribute("invite_key", inviteKey);
+            model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Error when registering user.");
+            return "register";
+        } catch (WebValidationException e) {
+            logger.warn("Validation error: {}", e.getMessage());
+            fillRegistrationParameters(model);
+            model.addAttribute("username", username);
+            model.addAttribute("invite_key", inviteKey);
+            switch (e.getSource()) {
+                case "username":
+                    model.addAttribute("msg_username", e.getMessage());
+                    break;
+                case "password":
+                    model.addAttribute("msg_password", e.getMessage());
+                    break;
+                case "invite_key":
+                    model.addAttribute("msg_invite_key", e.getMessage());
+                    break;
+            }
+            return "register";
+        } catch (Exception e) {
+            fillRegistrationParameters(model);
+            return "register";
+        }
+        logger.warn("Registration failed");
+        return null;
+    }
+
+    private void fillRegistrationParameters(Model model) {
+        model.addAttribute(
+                "need_invite_key",
+                !configurationService.getBoolean(Constants.Configuration.ALLOW_REGISTER)
+        );
+        model.addAttribute("min_password_length", Constants.MIN_PASSWORD_LENGTH);
+        model.addAttribute("max_password_length", Constants.MAX_PASSWORD_LENGTH);
     }
 }

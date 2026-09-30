@@ -16,7 +16,7 @@
                 <a href="/logout">Logout</a>
             </div>
             <div class="banner header" th:unless="${authStatus=='Y'}">
-                <a href="/login">Login</a>
+                <a href="/login">Login</a> | <a href="/register">Register</a>
             </div>
             <div class="banner header" th:unless="${requestUri=='/'}">
                 <a href="/">Back to main page</a>

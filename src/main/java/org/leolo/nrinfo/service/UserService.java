@@ -1,8 +1,11 @@
 package org.leolo.nrinfo.service;
 
 import jakarta.validation.constraints.NotNull;
+import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dao.UserDao;
 import org.leolo.nrinfo.dto.request.UserRegister;
+import org.leolo.nrinfo.exception.ValidationException;
+import org.leolo.nrinfo.exception.WebValidationException;
 import org.leolo.nrinfo.model.AuthenticationResult;
 import org.leolo.nrinfo.model.User;
 import org.leolo.nrinfo.util.RandomUtil;
@@ -15,6 +18,9 @@ import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 @Service
 public class UserService {
@@ -26,6 +32,8 @@ public class UserService {
     @Autowired private UserDao userDao;
     @Autowired private PasswordService passwordService;
     @Autowired private ConfigurationService configurationService;
+
+    private Random random = new Random();
 
 
     public AuthenticationResult authenticate(@NotNull String username, @NotNull String password) {
@@ -129,22 +137,25 @@ public class UserService {
 
     public boolean checkPasswordComplexity(String password) {
         //TODO: Implement function
-        return password.length() >= 4 && password.length() <= 72;
+        return password.length() >= Constants.MIN_PASSWORD_LENGTH && password.length() <= Constants.MAX_PASSWORD_LENGTH;
     }
 
-    public synchronized AuthenticationResult doRegisterUser(UserRegister userRegister) throws SQLException {
+    public synchronized AuthenticationResult doRegisterUser(UserRegister userRegister) throws SQLException, WebValidationException {
         try {
             if (!configurationService.getBoolean("allow_register")) {
                 //Open registration is not enabled.
                 if (userRegister.getInviteKey() == null || userRegister.getInviteKey().isEmpty()) {
-                    throw new IllegalArgumentException("invite key is required");
+                    throw new WebValidationException("invite key is required", "invite_key");
                 }
                 if (userDao.getInviteKeyUseLeft(userRegister.getInviteKey()) <= 0) {
-                    throw new IllegalArgumentException("invite key is invalid, or allowed usage had been reached");
+                    throw new WebValidationException("invite key is invalid, or allowed usage had been reached", "invite_key");
                 }
             }
             if (!checkPasswordComplexity(userRegister.getPassword())) {
-                throw new IllegalArgumentException("password does not meet requirements");
+                throw new WebValidationException("password does not meet requirements", "password");
+            }
+            if (userDao.isUserExists(userRegister.getUsername())) {
+                throw new WebValidationException("Username is already in use","username");
             }
             int newUserId = userDao.createUser(userRegister.getUsername(), passwordService.encryptPassword(userRegister.getPassword()));
             if (newUserId <= 0) {
@@ -154,10 +165,15 @@ public class UserService {
             for (String role : roles) {
                 userDao.addRole(newUserId, role);
             }
+            if (userRegister.getInviteKey() != null && !userRegister.getInviteKey().isEmpty()) {
+                userDao.markInviteKeyUsed(userRegister.getInviteKey());
+            }
             AuthenticationResult ar = new AuthenticationResult();
             ar.setUserId(newUserId);
             ar.setSuccess(true);
             return ar;
+        } catch (WebValidationException e) {
+            throw e;
         } catch (Exception e) {
             log.error(e.getMessage(), e);
             throw new RuntimeException(e.getMessage(), e);
@@ -166,5 +182,28 @@ public class UserService {
 
     public void changePassword(int userId, String oldPassword, String newPassword) {
 
+    }
+
+    public List<String> generateInviteKeys(int count) {
+        List<String> keys = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            keys.add(generateInviteKey(Constants.INVITE_KEY_LENGTH));
+        }
+        try {
+            userDao.insertInviteKey(keys);
+        } catch (SQLException e) {
+            log.error(e.getMessage(), e);
+            return new ArrayList<>();
+        }
+        return keys;
+    }
+
+    private String generateInviteKey(int length) {
+        final char [] chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ023456".toCharArray();
+        char [] key = new char[length];
+        for (int i = 0; i < length; i++) {
+            key[i] = chars[random.nextInt(chars.length)];
+        }
+        return new String(key);
     }
 }

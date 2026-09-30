@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Repository
@@ -35,6 +36,22 @@ public class UserDao extends BaseDao{
             }
         }
         return null;
+    }
+
+    public boolean isUserExists(String username) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            SELECT 1 FROM `user` WHERE username = ?
+                            """
+                )
+        ) {
+            preparedStatement.setString(1, username);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                return rs.next();
+            }
+        }
     }
 
     public void markLoginSuccess(int userId) throws SQLException {
@@ -184,7 +201,7 @@ public class UserDao extends BaseDao{
             try (ResultSet rs = preparedStatement.executeQuery()) {
                 if (rs.next()) {
                     int useLeft = rs.getInt("use_left");
-                    if (useLeft > 0) {
+                    if (useLeft >= 0) {
                         return useLeft;
                     }
                     return Integer.MAX_VALUE;
@@ -193,6 +210,43 @@ public class UserDao extends BaseDao{
         }
         logger.info("No matching key found");
         return -1;
+    }
+
+    public void insertInviteKey(List<String> keys) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            INSERT INTO invite_keys (
+                                invite_key, create_date, use_left
+                            ) VALUES (?, NOW(), 1)
+                            """
+                )
+        ) {
+            for (String key : keys) {
+                preparedStatement.setString(1, key);
+                preparedStatement.addBatch();
+            }
+            preparedStatement.executeBatch();
+        }
+    }
+
+    public void markInviteKeyUsed(String inviteKey) throws SQLException {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            UPDATE invite_keys
+                            SET
+                                use_left = IF(use_left < 0, use_left, use_left - 1)
+                            WHERE
+                                invite_key = ?
+                            """
+                )
+        ) {
+            preparedStatement.setString(1, inviteKey);
+            preparedStatement.executeUpdate();
+        }
     }
 
     public int createUser(String userName, String hashedPassword) throws SQLException {

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title>User Registration</title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script src="/scripts/main.js"></script>
+    <script>
+        function submitForm() {
+            var username = $("#username").val().trim();
+            var password = $("#password").val().trim();
+            var confirmPassword = $("#confirm_password").val().trim();
+            var needInviteKey = [[${need_invite_key}]];
+            var inviteKey = "";
+            if (needInviteKey) {
+                inviteKey = $("#invite_key").val().trim();
+                if (inviteKey.length === 0) {
+                    $('#invite_key_msg').text('Please enter your invite key.');
+                    return false;
+                }
+            }
+            if (username.length === 0) {
+                $('#username_message').text('Please enter username');
+                return false;
+            } else if (username.length < 3 || username.length > 100) {
+                $('#username_message').text('Username must contain at least 3 characters');
+                return false;
+            }
+            if (password.length === 0) {
+                $('#password_message').text('Please enter password');
+                return false;
+            } else if (password.length < [[${min_password_length}]] || password.length > [[${max_password_length}]]) {
+                $('#password_message').text('Passwords must be between [[${min_password_length}]] and [[${max_password_length}]] characters');
+                return false;
+            }
+            if (password !== confirmPassword) {
+                $('#password_message').text('Passwords do not match');
+                return false;
+            }
+            return true;
+        }
+    </script>
+</head>
+<body>
+<h1>User Registration</h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
+<form action="/register" method="post" onsubmit="return submitForm()">
+    <table>
+        <tr>
+            <th><label for="username">User name</label></th>
+            <td><input type="text" name="username" id="username" th:value="${username}"/></td>
+            <td th:text="${msg_username}" id="username_message"></td>
+        </tr>
+        <tr>
+            <th><label for="password">Password</label></th>
+            <td><input type="password" name="password" id="password" /></td>
+            <td th:text="${msg_password}" id="password_message"></td>
+        </tr>
+        <tr>
+            <th><label for="confirm_password">Confirm Password</label></th>
+            <td><input type="password" name="confirm_password" id="confirm_password" /></td>
+            <td th:text="${msg_confirm_password}"></td>
+        </tr>
+        <tr th:if="${need_invite_key}">
+            <th><label for="invite_key">Invite key</label></th>
+            <td><input type="text" name="invite_key" id="invite_key" th:value="${invite_key}"/></td>
+            <td th:text="${msg_invite_key}" id="invite_key_msg"></td>
+        </tr>
+        <tr>
+            <th colspan="3">
+                <input type="submit" value="Register" />
+            </th>
+        </tr>
+    </table>
+</form>
+<div th:replace="~{fragments/basic.html :: footer}"></div>
+</body>
+</html>
