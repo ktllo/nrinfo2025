@@ -207,5 +207,8 @@
         <span id="toggle_pass_type">Hide</span> passes
     </div>
     <div th:replace="~{fragments/basic.html :: footer}"></div>
+    <script th:if="${!showPass}">
+        toggle_pass();
+    </script>
 </body>
 </html>
