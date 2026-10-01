@@ -588,6 +588,7 @@ public class ScheduleService {
                 trainSchedule.setArrivalTime(fullTime.format(lastLocation.getPublicArrivalTime(),parsedDate));
             }
         }
+        trainSchedule.setSignalHeadcode(schedule.getSignalHeadcode());
         return trainSchedule;
     }
 

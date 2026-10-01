@@ -45,6 +45,7 @@ public class Constants {
 
     public static class UserPreferences {
         public static final String SHOW_SCHEDULE_PASS = "schedule_show_pass";
+        public static final String SHOW_HEADCODE_IN_SEARCH = "schedule_search_show_headcode";
     }
 
     public static class Configuration {
