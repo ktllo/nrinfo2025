@@ -37,10 +37,10 @@
                    return false;
                }
            }).autocomplete("instance")._renderItem = function(q, data) {
-               return $("<li>").append(
-                   "<span style='float: left;'>"+data.displayName+"</span>"+
-                   "<span style='font-size: smaller; text-align: right;float: inline-end;'>"+data.crsCode+"</span>"
-               ).append("</li>").appendTo(q);
+               var item = $("<li style='display: flow-root'>");
+               item.append("<div style='display: flow; float: left'>"+data.displayName+"</div>");
+               item.append("<div style='display: flow; float: right; font-size: small; z-index: -1;'>"+data.crsCode+"</div>");
+               return item.appendTo(q);
            }
            $('#train_date').datepicker({
               dateFormat: "yy-mm-dd",
