@@ -19,6 +19,7 @@ public class TrainScheduleSummary {
     private String trainOperator;
     private String stpIndicator;
     private String scheduleDate;
+    private String signalHeadcode;
 
     public String getStpIndicator() {
         if (stpIndicator == null) {

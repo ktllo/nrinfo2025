@@ -51,6 +51,7 @@ public class WebScheduleSearchController {
     public String scheduleSearch(Model model) {
         //This is an almost static page
         log.debug("schedule_search requested");
+        model.addAttribute("show_headcode", userPreferenceService.getBoolean(Constants.UserPreferences.SHOW_HEADCODE_IN_SEARCH));
         return "schedule_search";
     }
 

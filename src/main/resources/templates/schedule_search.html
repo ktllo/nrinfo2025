@@ -10,6 +10,8 @@
     <script language="JavaScript" src="lib/moment.js"></script>
     <script src="/scripts/main.js"></script>
     <script language="javascript">
+        //User Preference and configuration
+        const SHOW_HEADCODE = [[${show_headcode}]];
         //Initialize the input
         $(document).ready(function() {
            $("#location").autocomplete({
@@ -186,8 +188,14 @@
                                 baseInfo.append("<div class='station_arrow empty'>&nbsp;</div>");
                                 baseInfo.append("<div class='station_box empty'>&nbsp;</div>");
                             }
-                            var xtraInfo = $("<div>")
-                            xtraInfo.append("<div class='xtra_info'>" + schedule.summary.trainType + " service operated by " + schedule.summary.trainOperator + "</div>");
+                            var xtraInfo = $("<div>");
+                            var xtraInfo1 = $("<div>");
+                            xtraInfo1.addClass("xtra_info");
+                            if (SHOW_HEADCODE) {
+                                xtraInfo1.append("<span class='xtra_info'>"+schedule.summary.signalHeadcode+" </span>");
+                            }
+                            xtraInfo1.append("<span class='xtra_info'>" + schedule.summary.trainType + " service operated by " + schedule.summary.trainOperator + "</span>");
+                            xtraInfo1.appendTo(xtraInfo);
                             xtraInfo.append("<div class='xtra_info' style='text-align: right' onclick='viewFullSchedule(\"" + schedule.summary.trainUid + "\",\"" + schedule.summary.scheduleDate + "\")'>View full schedule</div>");
                             baseInfo.appendTo(entry);
                             xtraInfo.appendTo(entry);
