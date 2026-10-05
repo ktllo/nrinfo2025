@@ -614,42 +614,27 @@ CREATE TABLE `user` (
                         `last_login` datetime DEFAULT NULL,
                         `failed_login_count` mediumint(8) unsigned DEFAULT 0,
                         `last_failed_login` datetime DEFAULT NULL,
+                        `group_id` int(10) unsigned DEFAULT NULL,
                         PRIMARY KEY (`user_id`),
-                        UNIQUE KEY `users_username_IDX` (`username`) USING BTREE
+                        UNIQUE KEY `users_username_IDX` (`username`) USING BTREE,
+                        KEY `user_user_group_FK` (`group_id`),
+                        CONSTRAINT `user_user_group_FK` FOREIGN KEY (`group_id`) REFERENCES `user_group` (`group_id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=18 DEFAULT CHARSET=ascii COLLATE=ascii_general_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
--- Table structure for table `user_attribute`
+-- Table structure for table `user_group`
 --
 
-DROP TABLE IF EXISTS `user_attribute`;
+DROP TABLE IF EXISTS `user_group`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user_attribute` (
-                                  `attribute_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-                                  `attribute_name` varchar(100) NOT NULL,
-                                  `default_value` varchar(255) DEFAULT NULL,
-                                  PRIMARY KEY (`attribute_id`),
-                                  UNIQUE KEY `user_attribute_unique` (`attribute_name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Table structure for table `user_attribute_value`
---
-
-DROP TABLE IF EXISTS `user_attribute_value`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8mb4 */;
-CREATE TABLE `user_attribute_value` (
-                                        `user_id` int(10) unsigned NOT NULL,
-                                        `attribute_id` int(10) unsigned NOT NULL,
-                                        `attribute_value` varchar(255) NOT NULL,
-                                        `updated_by` int(10) unsigned DEFAULT NULL,
-                                        `updated_date` datetime DEFAULT NULL,
-                                        PRIMARY KEY (`user_id`,`attribute_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+CREATE TABLE `user_group` (
+                              `group_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                              `group_name` varchar(100) NOT NULL,
+                              PRIMARY KEY (`group_id`),
+                              UNIQUE KEY `user_group_u1` (`group_name`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -750,23 +735,6 @@ SET character_set_client = utf8mb4;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary table structure for view `v_user_attribute_value`
---
-
-DROP TABLE IF EXISTS `v_user_attribute_value`;
-/*!50001 DROP VIEW IF EXISTS `v_user_attribute_value`*/;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8mb4;
-/*!50001 CREATE VIEW `v_user_attribute_value` AS SELECT
-                                                     NULL AS `user_id`,
-                                                     NULL AS `attribute_id`,
-                                                     NULL AS `attribute_name`,
-                                                     NULL AS `attribute_value`,
-                                                     NULL AS `updated_by`,
-                                                     NULL AS `updated_date` */;
-SET character_set_client = @saved_cs_client;
-
---
 -- Dumping routines for database 'nrinfo'
 --
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
@@ -817,24 +785,6 @@ DELIMITER ;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `v_user_attribute_value`
---
-
-/*!50001 DROP VIEW IF EXISTS `v_user_attribute_value`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8mb4 */;
-/*!50001 SET character_set_results     = utf8mb4 */;
-/*!50001 SET collation_connection      = utf8mb4_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-    /*!50013 DEFINER=`nrinfo`@`%` SQL SECURITY DEFINER */
-    /*!50001 VIEW `v_user_attribute_value` AS select `uav`.`user_id` AS `user_id`,`uav`.`attribute_id` AS `attribute_id`,`ua`.`attribute_name` AS `attribute_name`,ifnull(`uav`.`attribute_value`,`ua`.`default_value`) AS `attribute_value`,`uav`.`updated_by` AS `updated_by`,`uav`.`updated_date` AS `updated_date` from (`user_attribute` `ua` left join `user_attribute_value` `uav` on(`ua`.`attribute_id` = `uav`.`attribute_id`)) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -845,4 +795,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-09-30 19:43:10
+-- Dump completed on 2026-10-05 17:19:48
