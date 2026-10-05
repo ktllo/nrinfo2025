@@ -1,6 +1,7 @@
 package org.leolo.nrinfo.dto.response;
 
 import lombok.*;
+import java.util.List;
 
 @Setter
 @Getter

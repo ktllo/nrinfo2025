@@ -38,6 +38,7 @@
         div.container {
             border: 1px solid orange;
             padding: 10px;
+            border-radius: 10px;
         }
 
         #schedule_table th {
@@ -125,6 +126,29 @@
         td.dtime {
             text-align: center;
         }
+
+        .number-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.25em;
+            height: 1.25em;
+            background: #000;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .r-box {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.25em;
+            height: 1.25em;
+            background: #fff;
+            color: #000;
+            border: 1px solid #000;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -148,10 +172,32 @@
                     Runs on <span th:text="${schedule_start_date}"></span> to <span th:text="${schedule_end_date}"></span>
                 </div>
                 <div th:text="${schedule_runs_day}"></div>
+                <th:block th:each="och : ${opChar}">
+                    <div th:text="${och}"></div>
+                </th:block>
+                <div th:if="${reservations == 'A'}">
+                    <span class="r-box">R</span> Reservation compulsory
+                </div>
+                <div th:if="${reservations == 'R'}">
+                    <span class="number-box">R</span> Reservation recommended
+                </div>
+                <div th:if="${reservations == 'S'}">
+                    &#x25c7; Reservation available
+                </div>
+            </div>
+            <div id="additional_info_always_on">
+                <div th:if="${firstClass}"><span class="number-box">1</span> First class is available on this service</div>
             </div>
             <div id="additional_info_control" onclick="toggle_additional_info();" style="font-size: smaller">
                 Show additional information
             </div>
+        </div>
+    </div>
+
+    <div th:if="${qTrain}" style="padding: 0 10px 10px 10px;">
+        <div class="container">
+            This train only operates when needed. If the train is not activated 2 hours before the scheduled departure time,
+            you may assume that the train is not running today.
         </div>
     </div>
     <table style="width: 100%" id="schedule_table">

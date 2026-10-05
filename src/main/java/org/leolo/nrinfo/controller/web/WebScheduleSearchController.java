@@ -139,6 +139,27 @@ public class WebScheduleSearchController {
             model.addAttribute("schedule_start_date", sdfDateOnly.format(displaySchedule.getStartDate()));
             model.addAttribute("schedule_end_date", sdfDateOnly.format(displaySchedule.getEndDate()));
             model.addAttribute("schedule_runs_day", ScheduleUtil.pettyFormatDaysRunsMasks(displaySchedule.getDaysRun()));
+            //Operational Characteristics
+            ArrayList<String> opChars = new ArrayList<>();
+            boolean isQTrain = false;
+            if (displaySchedule.getOperatingCharacteristics()!=null) {
+                for (char ch : displaySchedule.getOperatingCharacteristics().toCharArray()) {
+                    OperatingCharacteristic oc = OperatingCharacteristic.getByCode(ch);
+                    if (oc != null) {
+                        opChars.add(oc.getDescription());
+                    }
+                    if (ch == 'Q') {
+                        isQTrain = true;
+                    }
+                }
+            }
+            model.addAttribute("opChar", opChars);
+            model.addAttribute("qTrain", isQTrain);
+            model.addAttribute("firstClass", "B".equalsIgnoreCase(displaySchedule.getFirstClass()));
+            model.addAttribute("reservations",
+                    displaySchedule.getReservations() == null
+                    ? "" : displaySchedule.getReservations().toUpperCase()
+            );
             ArrayList<org.leolo.nrinfo.dto.web.ScheduleEntry> scheduleEntries = new ArrayList<>();
             boolean hasPass = false;
             for (ScheduleDetail scheduleEntry : displaySchedule.getDetailList()) {
