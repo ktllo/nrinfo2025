@@ -255,10 +255,10 @@ public class UserDao extends BaseDao{
                 PreparedStatement preparedStatement = connection.prepareStatement(
                         "INSERT INTO user (" +
                                 "username, password, last_password_date, created_date, updated_date," +
-                                "force_password_change, last_login, failed_login_count, last_failed_login)" +
+                                "force_password_change, last_login, failed_login_count, last_failed_login, group_id)" +
                                 "values (" +
                                 "?,?, NOW(), now(), now()," +
-                                "0, null,0,null" +
+                                "0, null,0,null, null" +
                                 ")",
                         Statement.RETURN_GENERATED_KEYS
                 )
@@ -312,6 +312,7 @@ public class UserDao extends BaseDao{
         user.setForcePasswordChange(rs.getBoolean("force_password_change"));
         user.setFailedLoginCount(rs.getInt("failed_login_count"));
         user.setLastFailedLoginDate(rs.getDate("last_failed_login"));
+        user.setUserGroupId(rs.getInt("group_id"));
         return user;
     }
 

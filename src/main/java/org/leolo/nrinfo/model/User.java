@@ -18,6 +18,7 @@ public class User {
     private boolean forcePasswordChange = false;
     private int failedLoginCount;
     private Date lastFailedLoginDate;
+    private int userGroupId;
 
     public User() {
     }
