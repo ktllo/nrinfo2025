@@ -39,6 +39,7 @@ public class UserAttributeService {
     }
 
     public boolean getBoolean(String attributeName, boolean defaultValue) {
+        init();
         UserAttribute userAttribute = attributeMap.get(attributeName);
         if (userAttribute == null) {
             return defaultValue;
@@ -51,6 +52,7 @@ public class UserAttributeService {
     }
 
     public int getInt(String attributeName, int defaultValue) {
+        init();
         UserAttribute userAttribute = attributeMap.get(attributeName);
         if (userAttribute == null) {
             return defaultValue;
@@ -63,6 +65,7 @@ public class UserAttributeService {
     }
 
     public String getString(String attributeName, String defaultValue) {
+        init();
         UserAttribute userAttribute = attributeMap.get(attributeName);
         if (userAttribute == null) {
             return defaultValue;
