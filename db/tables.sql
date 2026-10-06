@@ -114,6 +114,26 @@ CREATE TABLE `corpus` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `group_attribute`
+--
+
+DROP TABLE IF EXISTS `group_attribute`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `group_attribute` (
+                                   `attribute_id` int(10) unsigned NOT NULL,
+                                   `group_id` int(10) unsigned NOT NULL,
+                                   `attribute_value` varchar(100) DEFAULT NULL,
+                                   `updated_date` datetime DEFAULT NULL,
+                                   `updated_by` int(10) unsigned DEFAULT NULL,
+                                   PRIMARY KEY (`attribute_id`,`group_id`),
+                                   KEY `group_attribute_group_id_IDX` (`group_id`,`attribute_id`) USING BTREE,
+                                   CONSTRAINT `group_attribute_user_attribute_FK` FOREIGN KEY (`attribute_id`) REFERENCES `user_attribute` (`attribute_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+                                   CONSTRAINT `group_attribute_user_group_FK` FOREIGN KEY (`group_id`) REFERENCES `user_group` (`group_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `invite_keys`
 --
 
@@ -623,6 +643,44 @@ CREATE TABLE `user` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `user_attribute`
+--
+
+DROP TABLE IF EXISTS `user_attribute`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_attribute` (
+                                  `attribute_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+                                  `attribute_name` varchar(100) NOT NULL,
+                                  `default_value` varchar(100) DEFAULT NULL,
+                                  `updated_date` datetime DEFAULT NULL,
+                                  `updated_by` int(10) unsigned DEFAULT NULL,
+                                  PRIMARY KEY (`attribute_id`),
+                                  UNIQUE KEY `user_attribute_u1` (`attribute_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `user_attribute_value`
+--
+
+DROP TABLE IF EXISTS `user_attribute_value`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_attribute_value` (
+                                        `attribute_id` int(10) unsigned NOT NULL,
+                                        `user_id` int(10) unsigned NOT NULL,
+                                        `attribute_value` varchar(100) DEFAULT NULL,
+                                        `updated_date` varchar(100) DEFAULT NULL,
+                                        `updated_by` varchar(100) DEFAULT NULL,
+                                        PRIMARY KEY (`attribute_id`,`user_id`),
+                                        KEY `user_attribute_value_user_id_IDX` (`user_id`,`attribute_id`) USING BTREE,
+                                        CONSTRAINT `user_attribute_value_user_FK` FOREIGN KEY (`user_id`) REFERENCES `user` (`user_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+                                        CONSTRAINT `user_attribute_value_user_attribute_FK` FOREIGN KEY (`attribute_id`) REFERENCES `user_attribute` (`attribute_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `user_group`
 --
 
@@ -795,4 +853,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-05 17:19:48
+-- Dump completed on 2026-10-06 14:00:37
