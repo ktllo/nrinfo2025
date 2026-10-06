@@ -3,6 +3,7 @@ package org.leolo.nrinfo.service;
 import org.leolo.nrinfo.dao.UserPreferenceDao;
 import org.leolo.nrinfo.model.UserPreference;
 import org.leolo.nrinfo.model.UserPreferenceOption;
+import org.leolo.nrinfo.util.CommonUtil;
 import org.leolo.nrinfo.validator.InputValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -162,27 +163,7 @@ public class UserPreferenceService {
      */
     public boolean getBoolean(String preferenceName, boolean defaultValue) {
         String value = doGetPreference(preferenceName);
-        if (value == null) {
-            return defaultValue;
-        }
-         if (
-                 value.equalsIgnoreCase("true") ||
-                 value.equalsIgnoreCase("yes") ||
-                 value.equalsIgnoreCase("y") ||
-                 value.equalsIgnoreCase("on") ||
-                 value.equals("1")
-         ) {
-             return true;
-         } else if (
-                 value.equalsIgnoreCase("false") ||
-                 value.equalsIgnoreCase("no") ||
-                 value.equalsIgnoreCase("n") ||
-                 value.equalsIgnoreCase("off") ||
-                 value.equals("0")
-         ) {
-             return false;
-         }
-         return defaultValue;
+        return CommonUtil.parseBoolean(value, defaultValue);
     }
 
     /**

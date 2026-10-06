@@ -100,5 +100,29 @@ public class CommonUtil {
         }
     }
 
+    public static boolean parseBoolean(String value, boolean defaultValue) {
+        if (value == null) {
+            return defaultValue;
+        }
+        if (
+                value.equalsIgnoreCase("true") ||
+                        value.equalsIgnoreCase("yes") ||
+                        value.equalsIgnoreCase("y") ||
+                        value.equalsIgnoreCase("on") ||
+                        value.equals("1")
+        ) {
+            return true;
+        } else if (
+                value.equalsIgnoreCase("false") ||
+                        value.equalsIgnoreCase("no") ||
+                        value.equalsIgnoreCase("n") ||
+                        value.equalsIgnoreCase("off") ||
+                        value.equals("0")
+        ) {
+            return false;
+        }
+        return defaultValue;
+    }
+
 
 }
