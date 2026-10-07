@@ -48,6 +48,10 @@ public class Constants {
         public static final String SHOW_HEADCODE_IN_SEARCH = "schedule_search_show_headcode";
     }
 
+    public static class UserAttributes {
+        
+    }
+
     public static class Configuration {
         public static final String ALLOW_REGISTER = "allow_register";
     }
