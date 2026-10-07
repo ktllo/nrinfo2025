@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -36,6 +37,31 @@ public class UserDao extends BaseDao{
             }
         }
         return null;
+    }
+
+    public List<User> getUsersByPartialUsername(String username) throws SQLException {
+        List<User> users = new ArrayList<>();
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            SELECT
+                                *
+                            FROM
+                                user
+                            WHERE
+                                username LIKE ?
+                            """
+                )
+        ) {
+            preparedStatement.setString(1, "%"+username+"%");
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while(rs.next()) {
+                    users.add(parseUser(rs));
+                }
+            }
+        }
+        return users;
     }
 
     public boolean isUserExists(String username) throws SQLException {
@@ -298,6 +324,32 @@ public class UserDao extends BaseDao{
                 }
             }
         }
+    }
+
+    public Set<String> getUserRole(int userId) throws SQLException {
+        Set<String> roles = new HashSet<>();
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            SELECT
+                                r.role_name
+                            FROM
+                                role r
+                                JOIN user_role ur ON ur.role_id = r.role_id
+                            WHERE
+                                ur.user_id = ?
+                            """
+                )
+        ) {
+            preparedStatement.setInt(1, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    roles.add(rs.getString("role_name"));
+                }
+            }
+        }
+        return roles;
     }
 
     private User parseUser(ResultSet rs) throws SQLException {
