@@ -41,6 +41,8 @@ public class Constants {
     public static class Permission {
         public static final String GENERATE_INVITE_KEYS = "INVITE_USER";
         public static final String PURGE_CACHE = "PURGE_CONF_CACHE";
+
+        public static final String VIEW_OTHER_USERS = "VIEW_USERS";
     }
 
     public static class UserPreferences {

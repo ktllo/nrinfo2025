@@ -22,7 +22,7 @@ import java.util.*;
 public class UserPreferenceService {
 
     private Logger log = LoggerFactory.getLogger(UserPreferenceService.class);
-    @Autowired private UserPermissionService userPermissionService;
+    @Autowired private CurrentUserService currentUserService;
     @Autowired private UserPreferenceDao userPreferenceDao;
     @Autowired private PreferenceService preferenceService;
 
@@ -33,7 +33,7 @@ public class UserPreferenceService {
     }
 
     private synchronized void fillCache()  {
-        int userId = userPermissionService.getUserId();
+        int userId = currentUserService.getUserId();
         if (userId == 0) {
             log.warn("User ID is 0");
             userPreferenceMap = new HashMap<>();
@@ -74,7 +74,7 @@ public class UserPreferenceService {
      *         does not exist, the value fails validation, or the update fails
      */
     public boolean updateUserPreference(String preferenceName, String value) {
-        int userId = userPermissionService.getUserId();
+        int userId = currentUserService.getUserId();
         if (userId == 0) {
             log.warn("User ID is 0");
             return false;

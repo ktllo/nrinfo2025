@@ -4,6 +4,7 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.leolo.nrinfo.Constants;
+import org.leolo.nrinfo.service.CurrentUserService;
 import org.leolo.nrinfo.service.UserPermissionService;
 import org.leolo.nrinfo.service.WebAuthenticationService;
 import org.slf4j.Logger;
@@ -26,6 +27,9 @@ public class WebAuthInterceptor implements HandlerInterceptor {
 
     @Autowired
     private UserPermissionService userPermissionService;
+
+    @Autowired
+    private CurrentUserService currentUserService;
 
     /**
      * Interception point before the execution of a handler. Called after
@@ -52,7 +56,7 @@ public class WebAuthInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         webAuthenticationService.loadSession(request.getSession());
         if (webAuthenticationService.isAuthenticated()) {
-            userPermissionService.setUserId(webAuthenticationService.getUserId());
+            currentUserService.setUserId(webAuthenticationService.getUserId());
         }
         return HandlerInterceptor.super.preHandle(request, response, handler);
     }

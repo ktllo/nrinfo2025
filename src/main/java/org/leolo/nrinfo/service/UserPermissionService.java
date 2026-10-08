@@ -11,6 +11,7 @@ import org.springframework.context.annotation.ScopedProxyMode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.WebApplicationContext;
 
+import javax.naming.OperationNotSupportedException;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -24,11 +25,11 @@ public class UserPermissionService {
 
     private TreeSet<String> permissionCache = new TreeSet<>();
     private long cacheTime = Long.MIN_VALUE;
-    @Getter private int userId;
     @Getter
     private boolean hasData = false;
     @Autowired private ConfigurationService configurationService;
     @Autowired private UserDao userDao;
+    @Autowired private CurrentUserService currentUserService;
     private final Object SYNC_TOKEN = new Object();
     private Logger logger = LoggerFactory.getLogger(UserPermissionService.class);
 
@@ -46,7 +47,7 @@ public class UserPermissionService {
         synchronized (SYNC_TOKEN) {
             cacheTime = System.currentTimeMillis();
             try {
-                permissionCache.addAll(userDao.getPermissionForUser(userId));
+                permissionCache.addAll(userDao.getPermissionForUser(currentUserService.getUserId()));
                 hasData = true;
             } catch (SQLException e) {
                 hasData = false;
@@ -71,12 +72,22 @@ public class UserPermissionService {
         return permissions;
     }
 
-    public void setUserId(int userId) {
-        this.userId = userId;
+    public void rebuildCache() {
         hasData = false;
         synchronized (SYNC_TOKEN) {
             permissionCache.clear();
         }
+    }
+
+
+    /**
+     * Get the user ID of the current user. <code>0</code> if the user is not authenticated
+     *
+     * @see CurrentUserService.getUserId()
+     */
+    @Deprecated
+    public int getUserId() {
+        return currentUserService.getUserId();
     }
 
 

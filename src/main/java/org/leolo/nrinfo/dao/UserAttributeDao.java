@@ -52,4 +52,40 @@ public class UserAttributeDao extends BaseDao {
         return attributeMap;
     }
 
+    public Map<String, org.leolo.nrinfo.dto.response.UserAttribute> getUserAttributeForDisplay(int userId) throws SQLException {
+        Map<String, org.leolo.nrinfo.dto.response.UserAttribute> attributeMap = new HashMap<>();
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        """
+                            SELECT
+                                ua.attribute_name,
+                                ua.default_value,
+                                ga.attribute_value as group_value,
+                                uav.attribute_value as user_value
+                            FROM
+                                user u
+                                CROSS JOIN user_attribute ua
+                                LEFT OUTER JOIN group_attribute ga ON ua.attribute_id = ga.attribute_id AND u.group_id = ga.group_id
+                                LEFT OUTER JOIN user_attribute_value uav ON ua.attribute_id=uav.attribute_id AND uav.user_id = u.user_id
+                            WHERE
+                                u.user_id = ?
+                            """
+                )
+        ) {
+            preparedStatement.setInt(1, userId);
+            try (ResultSet rs = preparedStatement.executeQuery()) {
+                while (rs.next()) {
+                    org.leolo.nrinfo.dto.response.UserAttribute userAttribute = new org.leolo.nrinfo.dto.response.UserAttribute();
+                    userAttribute.setAttributeName(rs.getString("attribute_name"));
+                    userAttribute.setDefaultValue(rs.getString("default_value"));
+                    userAttribute.setGroupValue(rs.getString("group_value"));
+                    userAttribute.setUserValue(rs.getString("user_value"));
+                    attributeMap.put(rs.getString("attribute_name"), userAttribute);
+                }
+            }
+        }
+        return attributeMap;
+    }
+
 }

@@ -49,4 +49,7 @@ public class ResponseUtil {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("status","error","message",message));
     }
 
+    public static ResponseEntity<Map<String, String>> buildInternalServerErrorResponseForDatabaseError() {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("status","error","message","Internal server error"));
+    }
 }

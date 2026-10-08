@@ -2,12 +2,14 @@ package org.leolo.nrinfo.service;
 
 import jakarta.validation.constraints.NotNull;
 import org.leolo.nrinfo.Constants;
+import org.leolo.nrinfo.dao.UserAttributeDao;
 import org.leolo.nrinfo.dao.UserDao;
+import org.leolo.nrinfo.dao.UserPreferenceDao;
 import org.leolo.nrinfo.dto.request.UserRegister;
-import org.leolo.nrinfo.exception.ValidationException;
 import org.leolo.nrinfo.exception.WebValidationException;
 import org.leolo.nrinfo.model.AuthenticationResult;
 import org.leolo.nrinfo.model.User;
+import org.leolo.nrinfo.model.UserPreference;
 import org.leolo.nrinfo.util.RandomUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,9 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class UserService {
@@ -30,6 +30,8 @@ public class UserService {
     private Marker marker = MarkerFactory.getMarker("AUTH");
 
     @Autowired private UserDao userDao;
+    @Autowired private UserPreferenceDao userPreferenceDao;
+    @Autowired private UserAttributeDao userAttributeDao;
     @Autowired private PasswordService passwordService;
     @Autowired private ConfigurationService configurationService;
 
@@ -135,6 +137,14 @@ public class UserService {
         }
     }
 
+    public Collection<String> getUserPermissions(int userId) {
+        try {
+            return userDao.getPermissionForUser(userId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public boolean checkPasswordComplexity(String password) {
         //TODO: Implement function
         return password.length() >= Constants.MIN_PASSWORD_LENGTH && password.length() <= Constants.MAX_PASSWORD_LENGTH;
@@ -205,5 +215,42 @@ public class UserService {
             key[i] = chars[random.nextInt(chars.length)];
         }
         return new String(key);
+    }
+
+    public List<User> searchUsers(String searchKey) {
+        try {
+            return userDao.getUsersByPartialUsername(searchKey);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Set<String> getUserRole(int userId) {
+        try {
+            return userDao.getUserRole(userId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Map<String, String> getUserPreference(int userId) {
+        HashMap<String, String> map = new HashMap<>();
+        try {
+            List<UserPreference> preferences = userPreferenceDao.getAllUserPreferenceForUserByUserId(userId);
+            for (UserPreference preference : preferences) {
+                map.put(preference.getPreferenceName(), preference.getActualValue());
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+        return map;
+    }
+
+    public Map<String, org.leolo.nrinfo.dto.response.UserAttribute> getUserAttribute(int userId) {
+        try {
+            return userAttributeDao.getUserAttributeForDisplay(userId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
