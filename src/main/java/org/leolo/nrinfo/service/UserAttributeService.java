@@ -21,9 +21,8 @@ public class UserAttributeService {
 
     private static Logger logger = LoggerFactory.getLogger(UserAttributeService.class);
     @Autowired
-    private UserPermissionService userPermissionService;
-    @Autowired
     private UserAttributeDao userAttributeDao;
+    @Autowired CurrentUserService currentUserService;
 
     private Map<String, UserAttribute> attributeMap = null;
 
@@ -32,7 +31,7 @@ public class UserAttributeService {
             return;
         }
         try {
-            attributeMap = userAttributeDao.getAllAttributeForUser(userPermissionService.getUserId());
+            attributeMap = userAttributeDao.getAllAttributeForUser(currentUserService.getUserId());
         } catch (SQLException sqle) {
             logger.error(sqle.getMessage());
         }

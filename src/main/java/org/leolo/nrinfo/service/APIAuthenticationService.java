@@ -28,6 +28,8 @@ public class APIAuthenticationService {
     private boolean authenticated;
 
     private String username = null;
+    @Autowired
+    private CurrentUserService currentUserService;
 
     public void removeToken() {
         authToken = null;
@@ -40,11 +42,13 @@ public class APIAuthenticationService {
         userId = authenticationTokenService.getTokenOwner(authToken);
         if (userId == 0) {
             authenticated = false;
-            userPermissionService.setUserId(0);
+            currentUserService.setUserId(0);
+            userPermissionService.rebuildCache();
         } else {
             authenticated = true;
             authenticationTokenService.extendTokenLife(authToken);
-            userPermissionService.setUserId(userId);
+            currentUserService.setUserId(userId);
+            userPermissionService.rebuildCache();
         }
     }
 
@@ -76,9 +80,9 @@ public class APIAuthenticationService {
     public void setWebAuthenticationService(WebAuthenticationService webAuthenticationService) {
         authenticated = webAuthenticationService.isAuthenticated();
         if (authenticated) {
-            userPermissionService.setUserId(userId);
+            currentUserService.setUserId(userId);
             userId = webAuthenticationService.getUserId();
-
+            userPermissionService.rebuildCache();
         }
     }
 }
