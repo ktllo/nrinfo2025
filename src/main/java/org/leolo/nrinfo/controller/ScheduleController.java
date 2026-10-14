@@ -12,10 +12,7 @@ import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
 import org.leolo.nrinfo.model.Tiploc;
 import org.leolo.nrinfo.enums.TrainCategory;
-import org.leolo.nrinfo.service.APIAuthenticationService;
-import org.leolo.nrinfo.service.ScheduleService;
-import org.leolo.nrinfo.service.TiplocService;
-import org.leolo.nrinfo.service.UserPermissionService;
+import org.leolo.nrinfo.service.*;
 import org.leolo.nrinfo.util.CommonUtil;
 import org.leolo.nrinfo.util.DummyDurationFormatter;
 import org.leolo.nrinfo.util.ScheduleUtil;
@@ -39,6 +36,8 @@ public class ScheduleController {
     private static Logger log = LoggerFactory.getLogger(ScheduleController.class);
     @Autowired private APIAuthenticationService authenticationService;
     @Autowired private UserPermissionService userPermissionService;
+    @Autowired private CurrentUserService currentUserService;
+    @Autowired private UserScheduleService userScheduleService;
 
     @Autowired
     private ScheduleService scheduleService;
@@ -273,6 +272,10 @@ public class ScheduleController {
             }
             trainSchedule.getLocations().add(entry);
         }
+
+        if (currentUserService.isAuthenticated()) {
+            trainSchedule.setStarred(userScheduleService.isScheduleStarred(schedule));
+        }
         return ResponseEntity.ok(Map.of("result","success", "schedule", trainSchedule));
     }
 
@@ -436,6 +439,66 @@ public class ScheduleController {
             return ResponseUtil.buildFullErrorResponse("Unable to search train schedule","There are error when searching train schedule. Please try again later.");
         }
         return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("{uid}/{date}/star")
+    public ResponseEntity<?> setStar(
+            @PathVariable("uid") String uid,
+            @PathVariable("date") String date
+    ) {
+        if (!currentUserService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        Date parsedDate = null;
+        try {
+            parsedDate = new SimpleDateFormat("yyyy-MM-dd").parse(date);
+        } catch (ParseException e) {
+            //Bad input
+            return ResponseUtil.buildBadRequestResponse("Invalid date format");
+        }
+        UUID scheduleUUID = null;
+        try {
+            scheduleUUID = scheduleService.getScheduleUUID(uid, parsedDate);
+        } catch (SQLException e) {
+            log.error("Error while getting schedule UUID - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Database error", "There are issue retriving data. Try again later.");
+        }
+        if (scheduleUUID == null) {
+            //No schedule is available
+            return ResponseUtil.buildNotFoundResponse();
+        }
+        userScheduleService.starSchedule(scheduleUUID);
+        return ResponseEntity.ok(Map.of("resukt","success"));
+    }
+
+    @DeleteMapping("{uid}/{date}/star")
+    public ResponseEntity<?> unsetStar(
+            @PathVariable("uid") String uid,
+            @PathVariable("date") String date
+    ) {
+        if (!currentUserService.isAuthenticated()) {
+            return ResponseUtil.buildUnauthorizedResponse();
+        }
+        Date parsedDate = null;
+        try {
+            parsedDate = new SimpleDateFormat("yyyy-MM-dd").parse(date);
+        } catch (ParseException e) {
+            //Bad input
+            return ResponseUtil.buildBadRequestResponse("Invalid date format");
+        }
+        UUID scheduleUUID = null;
+        try {
+            scheduleUUID = scheduleService.getScheduleUUID(uid, parsedDate);
+        } catch (SQLException e) {
+            log.error("Error while getting schedule UUID - {}", e.getMessage(), e);
+            return ResponseUtil.buildFullErrorResponse("Database error", "There are issue retriving data. Try again later.");
+        }
+        if (scheduleUUID == null) {
+            //No schedule is available
+            return ResponseUtil.buildNotFoundResponse();
+        }
+        userScheduleService.unstarSchedule(scheduleUUID);
+        return ResponseEntity.ok(Map.of("resukt","success"));
     }
 
 }

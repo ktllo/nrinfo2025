@@ -32,4 +32,5 @@ public class TrainSchedule {
     private List<String> operatingCharacteristic = new ArrayList<>();
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private List<TrainScheduleEntry> locations = new ArrayList<>();
+    private Boolean starred;
 }

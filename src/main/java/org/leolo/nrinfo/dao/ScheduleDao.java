@@ -2,13 +2,11 @@ package org.leolo.nrinfo.dao;
 
 import org.leolo.nrinfo.Constants;
 import org.leolo.nrinfo.dto.request.ScheduleSearch;
-import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.model.Schedule;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
 import org.leolo.nrinfo.model.SearchParameter;
 import org.leolo.nrinfo.util.CommonUtil;
-import org.leolo.nrinfo.util.ScheduleUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -866,5 +864,95 @@ public class ScheduleDao extends BaseDao {
             }
         }
         return list;
+    }
+
+    public int getUserStarredScheduleCount(int userId) throws SQLException {
+        try (
+                Connection conn = ds.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            SELECT
+                                COUNT(1)
+                            FROM
+                                stared_schedule
+                            WHERE
+                                user_id = ?
+                            """
+                )
+        ) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+    /**
+     * Checks if a specific schedule has been marked as starred by a given user.
+     * <p>
+     * This method queries the {@code stared_schedule} table to determine if a relationship
+     * exists between the provided {@code userId} and {@code scheduleId}.
+     * </p>
+     *
+     * @param userId     the unique identifier of the user
+     * @param scheduleId the unique identifier (UUID) of the schedule to check
+     * @return {@code true} if the schedule is marked as starred for the user; {@code false} otherwise
+     * @throws SQLException if a database access error occurs or the connection is closed
+     */
+    public boolean isScheduleStarred(int userId, UUID scheduleId) throws SQLException {
+        try (
+                Connection conn = ds.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            SELECT
+                                1
+                            FROM
+                                stared_schedule
+                            WHERE
+                                user_id = ?
+                                AND schedule_id = ?
+                            """
+                )
+        ) {
+            pstmt.setInt(1, userId);
+            pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    public void starSchedule(int userId, UUID scheduleId) throws SQLException {
+        try (
+                Connection conn = ds.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            INSERT IGNORE INTO stared_schedule (user_id, schedule_id, created_time) 
+                            VALUES (?,?,NOW())
+                            """
+                )
+        ) {
+            pstmt.setInt(1, userId);
+            pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            pstmt.executeUpdate();
+        }
+    }
+
+    public void unstarSchedule(int userId, UUID scheduleId) throws SQLException {
+        try (
+                Connection conn = ds.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            DELETE FROM stared_schedule
+                            WHERE user_id = ? AND schedule_id = ?
+                            """
+                )
+        ) {
+            pstmt.setInt(1, userId);
+            pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            pstmt.executeUpdate();
+        }
     }
 }

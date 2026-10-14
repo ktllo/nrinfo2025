@@ -51,7 +51,7 @@ public class Constants {
     }
 
     public static class UserAttributes {
-        
+        public static final String MAX_STARRED_SCHEDULE = "max_stared_sch";
     }
 
     public static class Configuration {
