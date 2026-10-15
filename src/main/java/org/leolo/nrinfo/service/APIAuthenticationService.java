@@ -80,7 +80,6 @@ public class APIAuthenticationService {
     public void setWebAuthenticationService(WebAuthenticationService webAuthenticationService) {
         authenticated = webAuthenticationService.isAuthenticated();
         if (authenticated) {
-            currentUserService.setUserId(userId);
             userId = webAuthenticationService.getUserId();
             userPermissionService.rebuildCache();
         }
