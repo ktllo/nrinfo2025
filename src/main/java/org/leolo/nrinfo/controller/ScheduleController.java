@@ -7,6 +7,7 @@ import org.leolo.nrinfo.dto.response.TrainScheduleEntry;
 import org.leolo.nrinfo.dto.response.TrainScheduleSummary;
 import org.leolo.nrinfo.enums.OperatingCharacteristic;
 import org.leolo.nrinfo.enums.PowerType;
+import org.leolo.nrinfo.exception.OperationNotPermittedException;
 import org.leolo.nrinfo.model.Schedule;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
@@ -467,8 +468,12 @@ public class ScheduleController {
             //No schedule is available
             return ResponseUtil.buildNotFoundResponse();
         }
-        userScheduleService.starSchedule(scheduleUUID);
-        return ResponseEntity.ok(Map.of("resukt","success"));
+        try {
+            userScheduleService.starSchedule(scheduleUUID);
+        } catch (OperationNotPermittedException onpe) {
+            return ResponseEntity.status(onpe.getStatus()).body(Map.of("result", "failed", "message", onpe.getMessage()));
+        }
+        return ResponseEntity.ok(Map.of("result","success"));
     }
 
     @DeleteMapping("{uid}/{date}/star")
@@ -498,7 +503,7 @@ public class ScheduleController {
             return ResponseUtil.buildNotFoundResponse();
         }
         userScheduleService.unstarSchedule(scheduleUUID);
-        return ResponseEntity.ok(Map.of("resukt","success"));
+        return ResponseEntity.ok(Map.of("result","success"));
     }
 
 }

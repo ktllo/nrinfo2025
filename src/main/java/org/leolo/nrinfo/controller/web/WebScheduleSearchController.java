@@ -13,10 +13,7 @@ import org.leolo.nrinfo.model.Schedule;
 import org.leolo.nrinfo.model.ScheduleAssociation;
 import org.leolo.nrinfo.model.ScheduleDetail;
 import org.leolo.nrinfo.model.Tiploc;
-import org.leolo.nrinfo.service.ConfigurationService;
-import org.leolo.nrinfo.service.ScheduleService;
-import org.leolo.nrinfo.service.TiplocService;
-import org.leolo.nrinfo.service.UserPreferenceService;
+import org.leolo.nrinfo.service.*;
 import org.leolo.nrinfo.util.CommonUtil;
 import org.leolo.nrinfo.util.ScheduleUtil;
 import org.slf4j.Logger;
@@ -46,6 +43,8 @@ public class WebScheduleSearchController {
     private ConfigurationService configurationService;
     @Autowired
     private UserPreferenceService userPreferenceService;
+    @Autowired
+    private UserScheduleService userScheduleService;
 
     @GetMapping("/schedule_search")
     public String scheduleSearch(Model model) {
@@ -78,8 +77,6 @@ public class WebScheduleSearchController {
             model.addAttribute("non_tech_message","Requested schedule is outside retaining period");
             return "error_";
         }
-        log.debug("Data is clean");
-        model.addAttribute("message","Not implemented yet");
 
         UUID scheduleUUID = null;
         try {
@@ -169,6 +166,9 @@ public class WebScheduleSearchController {
             model.addAttribute("schedules", scheduleEntries);
             model.addAttribute("hasPass", hasPass);
             model.addAttribute("showPass", userPreferenceService.getBoolean(Constants.UserPreferences.SHOW_SCHEDULE_PASS));
+            model.addAttribute("starred", userScheduleService.isScheduleStarred(searchedSchedule));
+            model.addAttribute("uid", uid);
+            model.addAttribute("date", date);
             return "schedule";
         } catch (SQLException e) {
             log.error("Error while getting schedule - {}", e.getMessage(), e);

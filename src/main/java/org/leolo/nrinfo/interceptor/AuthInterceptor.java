@@ -39,10 +39,12 @@ public class AuthInterceptor implements HandlerInterceptor {
             }
         }
         if (!hasBearerToken) {
+            logger.debug("No Bearer token found");
             //Try cookies, as web interface may also use the APIs
             webAuthenticationService.loadSession(request.getSession());
             //Copy over the data
             if (webAuthenticationService.isAuthenticated()) {
+                logger.debug("Authenticated by session");
                 authenticationService.setWebAuthenticationService(webAuthenticationService);
             }
         }

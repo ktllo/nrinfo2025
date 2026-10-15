@@ -25,7 +25,9 @@ public class UserScheduleService {
 
     public int getUserStarredScheduleCount() {
         try {
-            return scheduleDao.getUserStarredScheduleCount(currentUserService.getUserId());
+            int count = scheduleDao.getUserStarredScheduleCount(currentUserService.getUserId());
+            logger.debug("getUserStarredScheduleCount for user {} count: {}", currentUserService.getUserId(), count);
+            return count;
         } catch (SQLException e) {
             logger.error(e.getMessage(), e);
             throw new RuntimeException(e);
@@ -33,8 +35,12 @@ public class UserScheduleService {
     }
 
     public boolean isScheduleStarred(Schedule schedule) {
+        return isScheduleStarred(schedule.getScheduleUuid());
+    }
+
+    public boolean isScheduleStarred(UUID uuid) {
         try {
-            return scheduleDao.isScheduleStarred(currentUserService.getUserId(), schedule.getScheduleUuid());
+            return scheduleDao.isScheduleStarred(currentUserService.getUserId(), uuid);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -46,6 +52,7 @@ public class UserScheduleService {
         }
         //Check is max count exceeded
         int maxStar = userAttributeService.getInt(Constants.UserAttributes.MAX_STARRED_SCHEDULE, 0);
+        logger.debug("maxStar: {}", maxStar);
         if (maxStar == 0 || (maxStar > 0 && maxStar <= getUserStarredScheduleCount())) {
             throw new OperationNotPermittedException(HttpStatus.CONFLICT, "You have starred too many schedules");
         }

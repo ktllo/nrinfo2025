@@ -19,6 +19,47 @@
                 $('#additional_info_control').text('Show additional info');
             }
         }
+
+        function toggle_starred() {
+            if (starred) {
+                //Unstar
+                $.ajax({
+                    url: '/api/schedule/[[${uid}]]/[[${date}]]/star',
+                    type: 'DELETE',
+                    success: function () {
+                        starred = false;
+                        update_starred();
+                    },
+                    error: function () {
+                        alert('An error occurred. Please try again later.');
+                    }
+                });
+            } else {
+                //Star
+
+                $.ajax({
+                    url: '/api/schedule/[[${uid}]]/[[${date}]]/star',
+                    type: 'PUT',
+                    success: function () {
+                        starred = true;
+                        update_starred();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Status: " + status + "; error: " + error);
+                        console.log(xhr);
+                        if (xhr.status === 409) {
+                            //Too many star
+                            alert(xhr.responseJSON.message);
+                        } else {
+                            alert('An error occurred. Please try again later.');
+                        }
+                    }
+                });
+            }
+        }
+        function update_starred() {
+            $("#schedule_star").attr("src", starred?"/imgs/star_filled.png":"/imgs/star_empty.png");
+        }
     </script>
     <script th:if="${hasPass}">
         function toggle_pass() {
@@ -30,6 +71,9 @@
                 $('.pass').show()
             }
         }
+    </script>
+    <script th:if="${authStatus=='Y'}">
+        var starred = [[${starred}]];
     </script>
     <style>
         *, *::before, *::after {
@@ -130,6 +174,7 @@
 <body>
     <div th:replace="~{fragments/basic.html :: header}"></div>
     <h1>
+        <img th:if="${authStatus=='Y'}" id="schedule_star" height="36" width="36" src="/imgs/star_empty.png" onclick="toggle_starred()"/>
         <span th:text="${headcode}"></span> <span th:text="${originDepartTime}"></span>
         <span th:text="${origin}"></span> to <span th:text="${destination}"></span>
     </h1>
@@ -209,6 +254,9 @@
     <div th:replace="~{fragments/basic.html :: footer}"></div>
     <script th:if="${!showPass}">
         toggle_pass();
+    </script>
+    <script>
+        update_starred();
     </script>
 </body>
 </html>

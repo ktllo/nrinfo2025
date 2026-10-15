@@ -1,6 +1,8 @@
 package org.leolo.nrinfo.dao;
 
 import org.leolo.nrinfo.model.UserAttribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -17,6 +19,8 @@ public class UserAttributeDao extends BaseDao {
 
     @Autowired
     private DataSource dataSource;
+
+    private Logger log = LoggerFactory.getLogger(UserAttributeDao.class);
 
     public Map<String, UserAttribute> getAllAttributeForUser(int userId) throws SQLException {
         HashMap<String, UserAttribute> attributeMap = new HashMap<String, UserAttribute>();
