@@ -25,6 +25,8 @@
             <div class="banner header" th:unless="${requestUri=='/'}">
                 <a href="/">Back to main page</a>
             </div>
+            <!-- Generic popup -->
+            <div style="display: none;" th:text="${generic_popup_message}"></div>
             <div id="generic_popup_div" class="message" th:if="${generic_popup_message}">
                 <div style="text-align: right" onclick="$('#generic_popup_div').fadeOut(function(){$('#generic_popup_div').remove();});">
                     Close
