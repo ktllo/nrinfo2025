@@ -94,6 +94,7 @@ public class WebAuthInterceptor implements HandlerInterceptor {
             }
             modelAndView.getModel().put("genTime", Instant.now());
             modelAndView.getModel().put("authStatus", webAuthenticationService.isAuthenticated()?"Y":"N");
+            modelAndView.getModel().put("isAdmin", userPermissionService.hasPermission(Constants.Permission.ADMIN_FUNC_IN_MENU));
             modelAndView.getModel().put("requestUri", request.getRequestURI());
         }
     }

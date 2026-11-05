@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title th:text="${report.reportName()}"></title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script th:replace="~{fragments/basic.html :: jqueryUI}"></script>
+    <script language="JavaScript" src="lib/moment.js"></script>
+    <script src="/scripts/main.js"></script>
+    <style>
+        th.subhead {
+            background-color: salmon;
+            width: 30%;
+            text-align: left;
+            padding-left: 0.75em;
+            overflow: clip;
+        }
+        td.submit-row {
+            background-color: salmon;
+            padding-left: 0.75em;
+        }
+        td.data-input {
+            padding-left: 1em;
+            width: 40%;
+            background-color: lightsalmon;
+        }
+        td.error-message {
+            width: 30%;
+            background-color: lightsalmon;
+        }
+        span.validation-errors {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+    <script th:inline="javascript">
+        function doSubmit(type) {
+            $('.validation-errors').text('');
+            var pass = true;
+            /*[# th:each="parameter : ${parameters}"]*/
+                /*[# th:if='${parameter.required}']*/
+                if ($("#rep-[[${parameter.position}]]").val().trim() === "") {
+                    pass = false;
+                    $("#erm-[[${parameter.position}]]").text([[${parameter.parameterName + ' is required`'}]]);
+                }
+                /*[/]*/
+            /*[/]*/
+            if (type === 'html') {
+                $('#report-form').attr("target", "_blank");
+            }
+            if (pass) {
+                $('#format').val(type);
+                $('#report-form').submit();
+            }
+        }
+    </script>
+</head>
+<body>
+<h1><span th:text="${report.reportId()}"></span> - <span th:text="${report.reportName}"></span></h1>
+<div th:replace="~{fragments/basic.html :: header}"></div>
+<form th:action="${'/report/' + report.reportId}" method="post" id="report-form">
+    <input type="hidden" name="format" id="format">
+    <table style="width:100%">
+        <tr th:each="parameter : ${parameters}">
+            <th th:text="${parameter.parameterName}" class="subhead"></th>
+            <td th:if="${parameter.parameterType == 'DATE_RANGE' || parameter.parameterType == 'DATE'}" class="data-input">
+                <input
+                        type="date"
+                        th:id="${'rep-' + parameter.position}"
+                        th:name="${'rep-' + parameter.position}"
+                        th:value="${parameter.parameterValue}"
+                >
+            </td>
+            <td th:if="${parameter.parameterType == 'STATION'}" class="data-input">
+                <input type="text" th:id="${'autc-' + parameter.position}" th:value="${parameter.displayedValue}" th:name="${'autc-' + parameter.position}" >
+                <input type="hidden" th:id="${'rep-' + parameter.position}" th:name="${'rep-' + parameter.position}">
+                <script th:inline="javascript">
+                    $(document).ready(function(){
+                        addStationAutoComplete([[${'autc-' + parameter.position}]],[[${'rep-' + parameter.position}]]);
+                    });
+                </script>
+            </td>
+            <td class="error-message"><span th:id="${'erm-' + parameter.position}" class="validation-errors" th:text="${parameter.validationMessage}"></span></td>
+        </tr>
+        <tr th:unless="${isSpecialReport}">
+            <td colspan="3" class="submit-row">
+                <button onclick="doSubmit('html')">HTML</button>
+                <button onclick="doSubmit('csv')">CSV</button>
+            </td>
+        </tr>
+        <tr th:if="${isSpecialReport}">
+            <td colspan="3" class="submit-row">
+                <button onclick="doSubmit('special')">Generate</button>
+            </td>
+        </tr>
+    </table>
+</form>
+</body>
+</html>
