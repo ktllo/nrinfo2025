@@ -75,7 +75,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                report_group_id, report_group_name
+                                report_group_id, report_group_name, display_order
                             FROM
                                 report_group
                             ORDER BY
@@ -85,7 +85,7 @@ public class ReportDao extends BaseDao {
                 ResultSet rs = pstmt.executeQuery();
         ) {
             while (rs.next()) {
-                ReportGroup rg = new ReportGroup(rs.getString("report_group_id"), rs.getString("report_group_name"));
+                ReportGroup rg = parseReportGroup(rs);
                 List<Report> reports = getReportsByReportGroupId(rg.reportGroupId());
                 if (!reports.isEmpty()) {
                     rg.reports().addAll(reports);
@@ -102,15 +102,17 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                report_group_id, report_group_name
+                                report_group_id, report_group_name, display_order
                             FROM
                                 report_group
+                            ORDER BY
+                                display_order, report_group_name
                             """
                 );
                 ResultSet rs = pstmt.executeQuery();
         ) {
             while (rs.next()) {
-                ReportGroup rg = new ReportGroup(rs.getString("report_group_id"), rs.getString("report_group_name"));
+                ReportGroup rg = parseReportGroup(rs);
                 List<Report> reports = getReportsByReportGroupIdForUser(rg.reportGroupId(), userId);
                 if (!reports.isEmpty()) {
                     rg.reports().addAll(reports);
@@ -362,6 +364,14 @@ public class ReportDao extends BaseDao {
                 rs.getString("report_mode"),
                 rs.getString("report_exec_name"),
                 rs.getString("html_style")
+        );
+    }
+
+    private ReportGroup parseReportGroup(ResultSet rs) throws SQLException {
+        return new ReportGroup(
+                rs.getString("report_group_id"),
+                rs.getString("report_group_name"),
+                rs.getInt("display_order")
         );
     }
 
