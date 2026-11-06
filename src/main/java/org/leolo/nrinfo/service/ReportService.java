@@ -565,13 +565,222 @@ public class ReportService {
 
         public void run() {
             logger.info("Report generation thread started");
-            status = ReportGenerationStatus.EXECUTING;
-            //TODO: Rewrite the code to make the generation here
-            generatedReport = getGeneratedReportByReportId(
-                    reportId,
-                    parameters,
-                    format
-            );
+            status = ReportGenerationStatus.PRE_EXECUTION;
+            long[]  timestamps = new long[5];
+            timestamps[GEN_TIME_START] = System.currentTimeMillis();
+            ExecutionResult executionResult;
+            Report report;
+            try {
+                report = reportDao.getReportByReportId(reportId);
+                for (ReportParameters rp: parameters) {
+                    if (!rp.getReportId().equals(reportId)) {
+                        throw new IllegalArgumentException("Report ID " + reportId + " does not match Report ID " + rp.getReportId());
+                    }
+                }
+                status = ReportGenerationStatus.EXECUTING;
+                if ("sp".equalsIgnoreCase(report.reportMode())) {
+                    timestamps[GEN_TIME_START_EXEC] = System.currentTimeMillis();
+                    executionResult = reportDao.executeReport(report, parameters);
+                    timestamps[GEN_TIME_EXEC_DONE] = System.currentTimeMillis();
+                } else if ("java".equalsIgnoreCase(report.reportMode())) {
+                    Class<?> reportClass;
+                    try {
+                        reportClass = Class.forName(report.reportExecName());
+                        if (!ReportProvider.class.isAssignableFrom(reportClass)) {
+                            throw new IllegalArgumentException("Report class " + reportClass.getName() + " is not a subclass of ReportProvider");
+                        }
+                        ReportProvider reportProvider = (ReportProvider) applicationContext.getBean(reportClass);
+                        timestamps[GEN_TIME_START_EXEC] = System.currentTimeMillis();
+                        executionResult = reportProvider.executeReport(parameters);
+                        timestamps[GEN_TIME_EXEC_DONE] = System.currentTimeMillis();
+                    } catch (ClassNotFoundException e) {
+                        throw new IllegalArgumentException("Report class " + report.reportExecName() + " does not exist");
+                    } catch (Exception e) {
+                        logger.warn("[ERROR] Report {} - {}", reportId, e.getMessage());
+                        throw new RuntimeException(e);
+                    }
+                } else if ("special".equalsIgnoreCase(report.reportMode())) {
+                    Class<?> reportClass;
+                    try {
+                        reportClass = Class.forName(report.reportExecName());
+                        if (!SpecialReportProvider.class.isAssignableFrom(reportClass)) {
+                            throw new IllegalArgumentException("Report class " + reportClass.getName() + " is not a subclass of SpecialReportProvider");
+                        }
+                        SpecialReportProvider reportProvider = (SpecialReportProvider) applicationContext.getBean(reportClass);
+                        timestamps[GEN_TIME_START_EXEC] = System.currentTimeMillis();
+                        generatedReport = reportProvider.generateReport(parameters);
+                        timestamps[GEN_TIME_EXEC_DONE] = System.currentTimeMillis();
+                        logger.info("[GENTIME] Special Report {} -Preexec: {}; Exec:{}; Total: {}",
+                                reportId,
+                                timestamps[GEN_TIME_START_EXEC] - timestamps[GEN_TIME_START],
+                                timestamps[GEN_TIME_EXEC_DONE] - timestamps[GEN_TIME_START_EXEC],
+                                timestamps[GEN_TIME_EXEC_DONE] - timestamps[GEN_TIME_START]);
+
+                        //Set it expire in an hour
+                        //TODO: make it configurable
+                        expiryTime = System.currentTimeMillis() + 3600_000;
+                        status = ReportGenerationStatus.FINISHED;
+                        return;
+                    } catch (ClassNotFoundException e) {
+                        throw new IllegalArgumentException("Report class " + report.reportExecName() + " does not exist");
+                    } catch (Exception e) {
+                        logger.warn("[ERROR] Report {} - {}", reportId, e.getMessage());
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    throw new IllegalArgumentException("Report mode " + report.reportMode() + " is not supported");
+                }
+                logger.debug("Response size: {}r {}c", executionResult.getRowCount(), executionResult.getColCount());
+                status = ReportGenerationStatus.TRANSFORMING;
+                ReportOutputTransformList transformList = reportDao.getReportOutputTransform(reportId);
+                Map<String, OutputTransformer> transformerMap = new HashMap<>();
+                for (ReportOutputTransform rot: transformList.stream().toList()) {
+                    String className = rot.transformClass();
+                    if (!transformerMap.containsKey(className)) {
+                        try {
+                            Class<?> transformClass = Class.forName(className);
+                            if (!OutputTransformer.class.isAssignableFrom(transformClass)) {
+                                throw new IllegalArgumentException("Transformer class " + className + " is not a subclass of OutputTransformer");
+                            }
+                            OutputTransformer transformer = (OutputTransformer) transformClass.getDeclaredConstructor().newInstance();
+                            transformerMap.put(className, transformer);
+                        } catch (ClassNotFoundException e) {
+                            throw new IllegalArgumentException("Transform class " + className + " does not exist");
+                        } catch (InvocationTargetException|InstantiationException|IllegalAccessException|NoSuchMethodException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }
+                for (int col=0; col<executionResult.getRowCount(); col++) {
+                    //Index in database are 1-indexed
+                    List<ReportOutputTransform> transforms = transformList.getTransformsForPosition(col+1);
+                    if (transforms != null && !transforms.isEmpty()) {
+                        for (ReportOutputTransform transform: transforms) {
+                            //Transform header
+                            OutputTransformer transformer = transformerMap.get(transform.transformClass());
+                            if (transformer == null) {
+                                throw new IllegalArgumentException("Transformer class " + transform.transformClass() + " does not exist");
+                            }
+                            executionResult.setHeader(col, transformer.transformTitle(format, executionResult.getHeader(col)));
+                            //Transform Body
+                            for (int row=0; row<executionResult.getRowCount(); row++) {
+                                executionResult.setData(row, col, transformer.transformData(format, executionResult.getData(row, col)));
+                                if ("html".equalsIgnoreCase(format)) {
+                                    executionResult.appendCssClass(row, col, transformer.getHtmlCssClass(executionResult.getOriginalRow(row).get(col)));
+                                }
+                            }
+                        }
+                    }
+                }
+                timestamps[GEN_TIME_TRANSFORM_DONE] = System.currentTimeMillis();
+                generatedReport = new GeneratedReport();
+                status = ReportGenerationStatus.FORMATTING;
+                if ("csv".equalsIgnoreCase(format)) {
+                    generatedReport.setMimeType("text/csv");
+                    generatedReport.setFileName(reportId+".csv");
+                    try (
+                            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                            OutputStreamWriter osw = new OutputStreamWriter(outputStream);
+                            CSVPrinter out = new CSVPrinter(osw, CSVFormat.RFC4180)
+                    ) {
+                        out.printRecord(executionResult.getHeader());
+                        for (List<String> row: executionResult.getData()) {
+                            out.printRecord(row);
+                        }
+                        out.flush();
+                        generatedReport.setData(outputStream.toByteArray());
+                    } catch (IOException e) {
+                        logger.error("Error while generating report {}", e.getMessage(), e);
+                    }
+                } else if ("html".equalsIgnoreCase(format)) {
+                    generatedReport.setMimeType("text/html");
+                    //No file name as this is designed for direct display
+                    try (
+                            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                            PrintWriter out = new PrintWriter(outputStream)
+                    ) {
+                        out.println("<!DOCTYPE html>");
+                        out.println("<html>");
+                        out.println("<head>");
+                        out.println("  <meta http-equiv=\"Content-Type\" content=\"text/html\">");
+                        out.println(String.format("  <title>%s</title>", reportId));
+                        if (report.htmlStyle() != null && !report.htmlStyle().isBlank()) {
+                            //TODO: Add space before each line
+                            out.println("  <style>");
+                            for (String line: report.htmlStyle().split("\n")) {
+                                out.print("    ");
+                                out.println(line.replace("\r", ""));
+                            }
+                            out.println("  </style>");
+                        }
+                        out.println("</head>");
+                        out.println("<body>");
+                        out.println(String.format("  <h1 style='text-align:center'>%s - %s</h1>", reportId, report.reportName()));
+                        out.println("  <h2 class='para-h2'>Generation Parameters</h2>");
+                        out.println("  <table class='para-table' style='border-collapse: collapse;'>");
+                        for (ReportParameters rp: parameters) {
+                            String oddEven = (rp.getPosition()%2) == 0 ? "even":"odd";
+                            if ("station".equalsIgnoreCase(rp.getParameterType())) {
+                                out.println(String.format("    <tr class='para-tr-%s'><th class='para-th-%04X'>%s</th><td class='para-td-%04X'>%s</td></tr>",
+                                        oddEven, rp.getPosition(), rp.getParameterName(), rp.getPosition(), rp.getDisplayedValue()));
+                            } else {
+                                out.println(String.format("    <tr class='para-tr-%s'><th class='para-th-%04X'>%s</th><td class='para-td-%04X'>%s</td></tr>",
+                                        oddEven, rp.getPosition(), rp.getParameterName(), rp.getPosition(), rp.getParameterValue()));
+                            }
+                        }
+                        out.println(String.format("    <tr><th>Generation Date:</th><td>%s</td></tr>",
+                                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date())
+                        ));
+                        out.println("</table>");
+                        out.println("  <hr>");
+                        out.println("  <h2 class='data-h2'>Report Body</h2>");
+                        if (executionResult.getRowCount() == 0) {
+                            out.println("  <div style='width:100%; font-weight:bold; text-align:center;' class='para-nodata'>** No rows found **</div>");
+                        } else {
+                            out.println("  <table class='data-table' style='border-collapse: collapse;'>");
+                            out.println("    <thead>");
+                            printHtmlTableRow(out, executionResult.getHeader(), "th", "data-tr-header", "data-th-%04X");
+                            out.println("    </thead>");
+                            out.println("    <tbody>");
+                            for (int rowNum = 0; rowNum < executionResult.getData().size(); rowNum++) {
+                                List<String> row = executionResult.getData().get(rowNum);
+                                List<String> css = executionResult.getCssClass().get(rowNum);
+                                String oddEven = rowNum%2 == 0 ? "even":"odd";
+                                printHtmlTableRow(out, row, "td", "data-tr-"+oddEven, "data-td-%04X", executionResult.getCssClass().get(rowNum));
+                                if (rowNum % 100 == 0) {
+                                    out.flush();
+                                }
+                            }
+                            out.println("    <tbody>");
+                            out.println("  </table>");
+                        }
+
+                        out.println("  <hr>");
+                        out.println("  <div style='width:100%; font-weight:bold; text-align:center;' class='footer'>** End of report **</div>");
+                        out.println("</body>");
+                        out.println("</html>");
+                        out.flush();
+                        generatedReport.setData(outputStream.toByteArray());
+                    } catch (IOException e) {
+                        logger.error("Error while generating report {}", e.getMessage(), e);
+                    }
+                } else {
+                    throw new IllegalArgumentException("Format " + format + " is not supported");
+                }
+                timestamps[GEN_TIME_OUTPUT_DONE] = System.currentTimeMillis();
+                logger.info("[GENTIME] Report {} - row {} col {}; Preexec: {}; Exec:{}; Transform: {}; Output: {}; Total: {}",
+                        reportId,
+                        executionResult.getRowCount(),
+                        executionResult.getColCount(),
+                        timestamps[GEN_TIME_START_EXEC] - timestamps[GEN_TIME_START],
+                        timestamps[GEN_TIME_EXEC_DONE] - timestamps[GEN_TIME_START_EXEC],
+                        timestamps[GEN_TIME_TRANSFORM_DONE] - timestamps[GEN_TIME_EXEC_DONE],
+                        timestamps[GEN_TIME_OUTPUT_DONE] - timestamps[GEN_TIME_TRANSFORM_DONE],
+                        timestamps[GEN_TIME_OUTPUT_DONE] - timestamps[GEN_TIME_START]);
+            } catch (Throwable e) {
+                status = ReportGenerationStatus.FAILED;
+                throw new RuntimeException(e);
+            }
             //Set it expire in an hour
             //TODO: make it configurable
             expiryTime = System.currentTimeMillis() + 3600_000;
@@ -584,14 +793,23 @@ public class ReportService {
 
     }
 
+    @Getter
     public enum ReportGenerationStatus {
-        PENDING,
-        PRE_EXECUTION,
-        EXECUTING,
-        TRANSFORMING,
-        FORMATTING,
-        FINISHED,
-        RETRIEVED;
+
+        PENDING("Your request is in the queue"),
+        PRE_EXECUTION("Preparing the execution"),
+        EXECUTING("Retrieving data for your report"),
+        TRANSFORMING("Transforming the data"),
+        FORMATTING("Formatting the report"),
+        FINISHED("Finished!"),
+        RETRIEVED("Finished!"),
+        FAILED("Generation failed");
+
+
+        final String message;
+        private ReportGenerationStatus(String message) {
+            this.message = message;
+        }
     }
 
 }

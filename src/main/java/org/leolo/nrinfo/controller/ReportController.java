@@ -37,14 +37,43 @@ public class ReportController {
             log.info("Request id {} not found", requestId);
             return ResponseUtil.buildNotFoundResponse();
         }
-        boolean ready = status == ReportService.ReportGenerationStatus.FINISHED || status == ReportService.ReportGenerationStatus.RETRIEVED;
-        return ResponseEntity.ok(
-                Map.of(
-                        "status", "success",
-                        "ready", ready,
-                        "generationStatus", status
-                )
-        );
+//        boolean ready = status == ReportService.ReportGenerationStatus.FINISHED || status == ReportService.ReportGenerationStatus.RETRIEVED;
+        switch (status) {
+            case PENDING:
+            case PRE_EXECUTION:
+            case EXECUTING:
+            case TRANSFORMING:
+            case FORMATTING:
+                return ResponseEntity.ok(
+                        Map.of(
+                                "status", "success",
+                                "ready", false,
+                                "generationStatus", status,
+                                "message", status.getMessage()
+                        )
+                );
+            case FINISHED:
+            case RETRIEVED:
+                return ResponseEntity.ok(
+                        Map.of(
+                                "status", "success",
+                                "ready", true,
+                                "generationStatus", status,
+                                "message", status.getMessage()
+                        )
+                );
+
+            case FAILED:
+                return ResponseEntity.ok(
+                            Map.of(
+                                    "status", "failed",
+                                    "ready", true,
+                                    "generationStatus", status,
+                                    "message", status.getMessage()
+                            )
+                    );
+        }
+        return ResponseUtil.buildNotImplementedResponse();
     }
 
 }
