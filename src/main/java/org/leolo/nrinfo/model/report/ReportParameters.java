@@ -2,12 +2,14 @@ package org.leolo.nrinfo.model.report;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
 
 @Getter
 @Setter
+@ToString
 public class ReportParameters implements Comparable<ReportParameters> {
 
     private String reportId;

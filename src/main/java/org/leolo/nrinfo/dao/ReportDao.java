@@ -336,6 +336,59 @@ public class ReportDao extends BaseDao {
         return reportOutputTransformList;
     }
 
+    public ReportParameters getReportParameters(String reportId, int position) throws SQLException {
+        try (
+                Connection conn = dataSource.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            SELECT
+                                report_id, position, parameter_name, parameter_type, required, validation_group
+                            FROM
+                                report_parameter
+                            WHERE
+                                report_id = ?
+                                AND position = ?
+                            """
+                )
+        ) {
+            pstmt.setString(1, reportId);
+            pstmt.setInt(2, position);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return parseReportParameters(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<ReportParameterOption> getReportParameterOptions(String reportId, int parameterPosition) throws SQLException {
+        List<ReportParameterOption> reportParameterOptions = new ArrayList<>();
+        try (
+                Connection conn = dataSource.getConnection();
+                PreparedStatement pstmt = conn.prepareStatement(
+                        """
+                            SELECT
+                               option_position, display_value, mapped_value
+                            FROM
+                                report_parameter_option
+                            WHERE
+                                report_id = ?
+                                AND parameter_position = ?
+                            """
+                )
+        ) {
+            pstmt.setString(1, reportId);
+            pstmt.setInt(2, parameterPosition);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    reportParameterOptions.add(parseReportParameterOption(rs));
+                }
+            }
+        }
+        return reportParameterOptions;
+    }
+
     private ReportOutputTransform parseReportOutputTransform(ResultSet rs) throws SQLException {
         return new ReportOutputTransform(
                 rs.getString("report_id"),
@@ -372,6 +425,14 @@ public class ReportDao extends BaseDao {
                 rs.getString("report_group_id"),
                 rs.getString("report_group_name"),
                 rs.getInt("display_order")
+        );
+    }
+
+    private ReportParameterOption parseReportParameterOption(ResultSet rs) throws SQLException {
+        return new ReportParameterOption(
+                rs.getString("display_value"),
+                rs.getString("mapped_value"),
+                rs.getInt("option_position")
         );
     }
 

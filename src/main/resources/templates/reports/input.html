@@ -64,7 +64,7 @@
     <input type="hidden" name="format" id="format">
     <table style="width:100%">
         <tr th:each="parameter : ${parameters}">
-            <th th:text="${parameter.parameterName}" class="subhead"></th>
+            <th class="subhead"><label  th:text="${parameter.parameterName}" th:for="${'rep-' + parameter.position}"></label></th>
             <td th:if="${parameter.parameterType == 'DATE_RANGE' || parameter.parameterType == 'DATE'}" class="data-input">
                 <input
                         type="date"
@@ -75,12 +75,22 @@
             </td>
             <td th:if="${parameter.parameterType == 'STATION'}" class="data-input">
                 <input type="text" th:id="${'autc-' + parameter.position}" th:value="${parameter.displayedValue}" th:name="${'autc-' + parameter.position}" >
-                <input type="hidden" th:id="${'rep-' + parameter.position}" th:name="${'rep-' + parameter.position}">
+                <input type="hidden" th:id="${'rep-' + parameter.position}" th:name="${'rep-' + parameter.position}" th:value="${parameter.parameterValue}" >
                 <script th:inline="javascript">
                     $(document).ready(function(){
                         addStationAutoComplete([[${'autc-' + parameter.position}]],[[${'rep-' + parameter.position}]]);
                     });
                 </script>
+            </td>
+            <td th:if="${parameter.parameterType == 'SELECT'}" class="data-input">
+                <select th:id="${'rep-' + parameter.position}" th:name="${'rep-' + parameter.position}">
+                    <option
+                            th:each="option: ${parameter.options}"
+                            th:value="${option.mappedValue}"
+                            th:text="${option.displayValue}"
+                            th:selected="${option.mappedValue == parameter.parameterValue}"
+                    ></option>
+                </select>
             </td>
             <td class="error-message"><span th:id="${'erm-' + parameter.position}" class="validation-errors" th:text="${parameter.validationMessage}"></span></td>
         </tr>

@@ -7,6 +7,7 @@ import org.leolo.nrinfo.dao.ReportDao;
 import org.leolo.nrinfo.model.report.*;
 import org.leolo.nrinfo.report.OutputTransformer;
 import org.leolo.nrinfo.report.ReportProvider;
+import org.leolo.nrinfo.report.SpecialReportProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +55,14 @@ public class ReportService {
         }
     }
 
+    public List<Report> getAllReports() {
+        try {
+            return reportDao.getAllReports();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<ReportGroup> getReportGroupsForUser() {
         if (!currentUserService.isAuthenticated()) {
             return List.of();
@@ -66,6 +75,19 @@ public class ReportService {
                 reportGroupList = reportDao.getReportGroupsForUser(currentUserService.getUserId());
             }
             reportGroupList.sort(Comparator.comparing(ReportGroup::reportGroupName));
+            for (ReportGroup reportGroup : reportGroupList) {
+                reportGroup.reports().sort(Report.reportComparator);
+            }
+            return reportGroupList;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<ReportGroup> getReportGroups() {
+        try {
+            List<ReportGroup> reportGroupList = reportDao.getReportGroups();
+            reportGroupList.sort(Comparator.comparing(ReportGroup::displayOrder));
             for (ReportGroup reportGroup : reportGroupList) {
                 reportGroup.reports().sort(Report.reportComparator);
             }
@@ -220,7 +242,30 @@ public class ReportService {
                     logger.warn("[ERROR] Report {} - {}", reportId, e.getMessage());
                     throw new RuntimeException(e);
                 }
-            } else {
+            } else if ("special".equalsIgnoreCase(report.reportMode())) {
+                Class<?> reportClass;
+                try {
+                    reportClass = Class.forName(report.reportExecName());
+                    if (!SpecialReportProvider.class.isAssignableFrom(reportClass)) {
+                        throw new IllegalArgumentException("Report class " + reportClass.getName() + " is not a subclass of SpecialReportProvider");
+                    }
+                    SpecialReportProvider reportProvider = (SpecialReportProvider) applicationContext.getBean(reportClass);
+                    timestamps[GEN_TIME_START_EXEC] = System.currentTimeMillis();
+                    GeneratedReport greport = reportProvider.generateReport(parameters);
+                    timestamps[GEN_TIME_EXEC_DONE] = System.currentTimeMillis();
+                    logger.info("[GENTIME] Special Report {} -Preexec: {}; Exec:{}; Total: {}",
+                            reportId,
+                            timestamps[GEN_TIME_START_EXEC] - timestamps[GEN_TIME_START],
+                            timestamps[GEN_TIME_EXEC_DONE] - timestamps[GEN_TIME_START_EXEC],
+                            timestamps[GEN_TIME_EXEC_DONE] - timestamps[GEN_TIME_START]);
+                    return greport;
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalArgumentException("Report class " + report.reportExecName() + " does not exist");
+                } catch (Exception e) {
+                    logger.warn("[ERROR] Report {} - {}", reportId, e.getMessage());
+                    throw new RuntimeException(e);
+                }
+            }else {
                 throw new IllegalArgumentException("Report mode " + report.reportMode() + " is not supported");
             }
             logger.debug("Response size: {}r {}c", executionResult.getRowCount(), executionResult.getColCount());
@@ -403,7 +448,18 @@ public class ReportService {
 
     public List<ReportParameters> getReportParametersForReport(String reportId) {
         try {
-            return reportDao.getReportParametersForReport(reportId);
+            List<ReportParameters> parameters = new ArrayList<>();
+            for (ReportParameters rp: reportDao.getReportParametersForReport(reportId)) {
+                logger.debug("Report parameters: {}", rp);
+                if ("SELECT".equalsIgnoreCase(rp.getParameterType())) {
+                    OptionedReportParameters orp = new OptionedReportParameters(rp);
+                    orp.getOptions().addAll(reportDao.getReportParameterOptions(reportId, rp.getPosition()));
+                    parameters.add(orp);
+                } else {
+                    parameters.add(rp);
+                }
+            }
+            return parameters;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
