@@ -1,5 +1,6 @@
 package org.leolo.nrinfo.service;
 
+import lombok.Getter;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.leolo.nrinfo.Constants;
@@ -8,10 +9,12 @@ import org.leolo.nrinfo.model.report.*;
 import org.leolo.nrinfo.report.OutputTransformer;
 import org.leolo.nrinfo.report.ReportProvider;
 import org.leolo.nrinfo.report.SpecialReportProvider;
+import org.leolo.nrinfo.util.CommonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -25,17 +28,62 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Service
 public class ReportService {
 
     @Autowired private CurrentUserService currentUserService;
+    @Autowired private WebAuthenticationService webAuthenticationService;
     @Autowired private UserPermissionService userPermissionService;
     @Autowired private ReportDao reportDao;
     @Autowired private ApplicationContext applicationContext;
+    @Autowired private ConfigurationService configurationService;
     @Autowired private TiplocService tiplocService;
 
     private Logger logger = LoggerFactory.getLogger(ReportService.class);
+
+    private ExecutorService executor = null;
+
+    private Map<UUID, ReportGenerationThread> pendingReports = new Hashtable<>();
+
+
+    @Scheduled(fixedRate = 60000)
+    public void removeExpiredReports() {
+        ArrayList<UUID> toRemove = new ArrayList<>();
+        for (UUID uuid : pendingReports.keySet()) {
+            ReportGenerationThread thread = pendingReports.get(uuid);
+            if (thread.status == ReportGenerationStatus.RETRIEVED || thread.expiryTime < System.currentTimeMillis()) {
+                toRemove.add(uuid);
+            }
+        }
+        logger.info("Going to remove {} generated reports", toRemove.size());
+        for (UUID uuid : toRemove) {
+            pendingReports.remove(uuid);
+        }
+    }
+
+    public ReportGenerationStatus getReportGenerationStatus(UUID uuid) {
+        ReportGenerationThread thread = pendingReports.get(uuid);
+        int currentUser = webAuthenticationService.getUserId();
+        //If report is not own by current user, refuse to expose the result
+        if (thread == null || thread.status == ReportGenerationStatus.RETRIEVED) {
+            return null;
+        }
+        return thread.status;
+    }
+
+    private synchronized void init() {
+        if (executor == null) {
+            executor = Executors.newFixedThreadPool(
+                    configurationService.getInt(
+                            Constants.Configuration.REPORT_GENERATION_THREAD_POOL_SIZE,
+                            5
+                    )
+            );
+        }
+    }
 
     public List<Report> getReportForUser() {
         if (!currentUserService.isAuthenticated()) {
@@ -419,6 +467,34 @@ public class ReportService {
         }
     }
 
+    public UUID queueDeferredReportGeneration(String reportId, List<ReportParameters> parameters, String format) {
+        init();
+        UUID uuid = CommonUtil.generateUUID();
+        ReportGenerationThread thread = new ReportGenerationThread(
+                currentUserService.getUserId(),
+                reportId,
+                parameters,
+                format
+        );
+        executor.submit(thread);
+        pendingReports.put(uuid, thread);
+        return uuid;
+    }
+
+    public GeneratedReport getGeneratedReport(UUID uuid) {
+        init();
+        ReportGenerationThread thread = pendingReports.get(uuid);
+        if (thread == null) {
+            return null;
+        }
+        if (thread.status == ReportGenerationStatus.FINISHED || thread.status == ReportGenerationStatus.RETRIEVED) {
+            thread.status = ReportGenerationStatus.RETRIEVED;
+            return thread.getGeneratedReport();
+        }
+        return null;
+
+    }
+
     private void printHtmlTableRow(PrintWriter out,List<String> row, String cellType, String rowClass, String cellClassPattern) {
         printHtmlTableRow(out, row, cellType, rowClass, cellClassPattern, null);
     }
@@ -463,6 +539,59 @@ public class ReportService {
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    class ReportGenerationThread implements Runnable {
+
+        private static final Logger logger = LoggerFactory.getLogger(ReportGenerationThread.class);
+
+        int reportOwner;
+        String reportId;
+        List<ReportParameters> parameters;
+        String format;
+
+        long expiryTime = Long.MAX_VALUE;
+        ReportGenerationStatus status = ReportGenerationStatus.PENDING;
+
+        @Getter
+        GeneratedReport generatedReport;
+
+        public ReportGenerationThread(int reportOwner, String reportId, List<ReportParameters> parameters, String format) {
+            this.reportOwner = reportOwner;
+            this.reportId = reportId;
+            this.parameters = parameters;
+            this.format = format;
+        }
+
+        public void run() {
+            logger.info("Report generation thread started");
+            status = ReportGenerationStatus.EXECUTING;
+            //TODO: Rewrite the code to make the generation here
+            generatedReport = getGeneratedReportByReportId(
+                    reportId,
+                    parameters,
+                    format
+            );
+            //Set it expire in an hour
+            //TODO: make it configurable
+            expiryTime = System.currentTimeMillis() + 3600_000;
+            status = ReportGenerationStatus.FINISHED;
+        }
+
+        public void markRetrieved() {
+            status = ReportGenerationStatus.RETRIEVED;
+        }
+
+    }
+
+    public enum ReportGenerationStatus {
+        PENDING,
+        PRE_EXECUTION,
+        EXECUTING,
+        TRANSFORMING,
+        FORMATTING,
+        FINISHED,
+        RETRIEVED;
     }
 
 }

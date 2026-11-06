@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="/css/main.css">
+    <title>Report Generating</title>
+    <script th:replace="~{fragments/basic.html :: jquery}"></script>
+    <script language="JavaScript" src="lib/moment.js"></script>
+    <script src="/scripts/main.js"></script>
+    <script th:inline="javascript">
+        var requestId = [[${requestId}]];
+        var listenerId = setInterval(function () {
+            $.ajax(
+                {
+                    type: "GET",
+                    url: "/api/report/status/"+requestId,
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.status === "success") {
+                            console.log(data);
+                            if (data.ready) {
+                                $('#display-message').text("Report generated. Page will be refreshed automatically.");
+                                clearInterval(listenerId);
+                                loadReport();
+                            }
+                        }
+                    }, error: function (data) {
+                        $('#display-message').text("There was a problem with the report generation, please try again later.");
+
+                        clearInterval(listenerId);
+                    }
+                }
+            );
+        }, 1000);
+
+        function loadReport() {
+            /*[# th:if="${targetFormat=='html'}"]*/
+            $.ajax({
+                type: "GET",
+                url: "/report/get/" + requestId,
+                dataType: "html",
+                success: function (html) {
+                    document.open();
+                    document.write(html);
+                    document.close();
+                }
+            });
+            /*[/]*/
+            /*[# th:unless="${targetFormat=='html'}"]*/
+                window.location.href = "/report/get/" + requestId;
+                $('#display-message').text("Your report has been generated successfully. The download should begin shortly. You may close this page.");
+            /*[/]*/
+        }
+    </script>
+</head>
+<body>
+<div id="display-message">
+    Please wait while your report is generated...
+</div>
+</body>
+</html>

@@ -24,6 +24,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 public class WebReportGenerationController {
@@ -74,23 +75,23 @@ public class WebReportGenerationController {
     }
 
     @PostMapping("/report/{reportId}")
-    public ModelAndView generateReport(
+    public String generateReport(
+            Model model,
             RedirectAttributes redirectAttributes,
-            HttpServletResponse response,
             @PathVariable String reportId,
             @RequestParam Map<String, String> parameters
     ) {
-
+        //Recheck permissions
         if (!currentUserService.isAuthenticated()) {
             redirectAttributes.addFlashAttribute(Constants.Model.LOGIN_REDIRECT_DESTINATION, "/report/" + reportId);
-            return new ModelAndView("redirect:/login");
+            return "redirect:/login";
         }
         if (
                 !userPermissionService.hasPermission(Constants.Permission.GENERATE_REPORTS) ||
                         !reportService.checkUserPermissionForReport(reportId)
         ) {
             redirectAttributes.addFlashAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "You do not have permission to view this page");
-            return new ModelAndView("redirect:/");
+            return "redirect:/";
         }
         logger.info("Generating report for report: {}", reportId);
         Report report = reportService.getReportByReportId(reportId);
@@ -110,20 +111,35 @@ public class WebReportGenerationController {
             }
         }
         if (!reportService.validateRequest(reportParameters)) {
-            ModelAndView mav = new ModelAndView("reports/input");
-            mav.addObject("parameters",reportParameters);
-            mav.addObject("report", report);
+            model.addAttribute("parameters",reportParameters);
+            model.addAttribute("report", report);
             if (needReenterData) {
-                mav.addObject(Constants.Model.GENERIC_POPUP_MESSAGE, "Due to technical restriction, you may have to re-enter the report generation parameters.");
+                model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Due to technical restriction, you may have to re-enter the report generation parameters.");
             }
-            return mav;
+            return "reports/input";
         }
-        logger.debug("Generating report for report {} - Validation OK", reportId);
-        GeneratedReport generatedReport = reportService.getGeneratedReportByReportId(
-                reportId,
-                reportParameters,
-                reportFormat
+        UUID uuid = reportService.queueDeferredReportGeneration(
+                reportId, reportParameters, reportFormat
         );
+        model.addAttribute("targetFormat", reportFormat);
+        model.addAttribute("requestId", uuid.toString());
+        return "reports/deferred_generation";
+    }
+
+    @GetMapping("/report/get/{uuid}")
+    public ModelAndView getReport(
+            RedirectAttributes redirectAttributes,
+            HttpServletResponse response,
+            @PathVariable String uuid
+    ) {
+        if (!currentUserService.isAuthenticated()) {
+            return new ModelAndView("redirect:/login");
+        }
+        GeneratedReport generatedReport = reportService.getGeneratedReport(UUID.fromString(uuid));
+        if (generatedReport == null) {
+            redirectAttributes.addFlashAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "No such report");
+            return new ModelAndView("redirect:/");
+        }
         response.setStatus(HttpServletResponse.SC_OK);
         response.setHeader("Cache-Control", "no-cache");
         response.setHeader("Pragma", "no-cache");
