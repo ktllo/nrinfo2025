@@ -58,6 +58,8 @@ public class Constants {
         public static final String ALLOW_REGISTER = "allow_register";
 
         public static final String REPORT_GENERATION_THREAD_POOL_SIZE = "report.threadpool.size";
+
+        public static final String MAX_REPORT_AGE = "report.max_age";
     }
 
     public static class SQLTypes {

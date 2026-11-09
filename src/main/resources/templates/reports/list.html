@@ -12,8 +12,8 @@
 <h1>Report list</h1>
 <div th:replace="~{fragments/basic.html :: header}"></div>
 <th:block th:each="report_group : ${report_groups}">
-    <h2 th:text="${report_group.reportGroupName()}"></h2>
-    <ul th:each="report : ${report_group.reports()}">
+    <h2 th:text="${report_group.reportGroupName}"></h2>
+    <ul th:each="report : ${report_group.reports}">
         <li><a th:href="${'report/'+report.reportId()}"><span th:text="${report.reportId()}"></span> - <span th:text="${report.reportName()}"></span></a></li>
     </ul>
 </th:block>

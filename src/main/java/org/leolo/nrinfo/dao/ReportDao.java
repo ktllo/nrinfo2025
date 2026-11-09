@@ -29,7 +29,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                report_id, report_name, report_mode, report_exec_name, html_style
+                                report_id, report_name, report_mode, report_exec_name, html_style, skip_permission_check, hidden
                             FROM report
                             """
                 );
@@ -49,7 +49,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                r.report_id, report_name, report_mode, report_exec_name, html_style
+                                r.report_id, report_name, report_mode, report_exec_name, html_style, skip_permission_check, hidden
                             FROM
                                 report r
                                 JOIN user_report ur ON r.report_id=ur.report_id
@@ -86,9 +86,9 @@ public class ReportDao extends BaseDao {
         ) {
             while (rs.next()) {
                 ReportGroup rg = parseReportGroup(rs);
-                List<Report> reports = getReportsByReportGroupId(rg.reportGroupId());
+                List<Report> reports = getReportsByReportGroupId(rg.getReportGroupId());
                 if (!reports.isEmpty()) {
-                    rg.reports().addAll(reports);
+                    rg.getReports().addAll(reports);
                     reportGroups.add(rg);
                 }
             }
@@ -113,9 +113,9 @@ public class ReportDao extends BaseDao {
         ) {
             while (rs.next()) {
                 ReportGroup rg = parseReportGroup(rs);
-                List<Report> reports = getReportsByReportGroupIdForUser(rg.reportGroupId(), userId);
+                List<Report> reports = getReportsByReportGroupIdForUser(rg.getReportGroupId(), userId);
                 if (!reports.isEmpty()) {
-                    rg.reports().addAll(reports);
+                    rg.getReports().addAll(reports);
                     reportGroups.add(rg);
                 }
             }
@@ -130,7 +130,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                report_id, report_name, report_mode, report_exec_name, html_style
+                                report_id, report_name, report_mode, report_exec_name, html_style, skip_permission_check, hidden
                             FROM
                                 report r
                             WHERE
@@ -155,7 +155,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                r.report_id, report_name, report_mode, report_exec_name, html_style
+                                r.report_id, report_name, report_mode, report_exec_name, html_style, skip_permission_check, hidden
                             FROM
                                 report r
                                 JOIN user_report ur ON r.report_id=ur.report_id
@@ -218,7 +218,7 @@ public class ReportDao extends BaseDao {
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
                             SELECT
-                                report_id, report_name, report_mode, report_exec_name, html_style
+                                report_id, report_name, report_mode, report_exec_name, html_style, skip_permission_check, hidden
                             FROM
                                 report
                             WHERE
@@ -416,7 +416,9 @@ public class ReportDao extends BaseDao {
                 rs.getString("report_name"),
                 rs.getString("report_mode"),
                 rs.getString("report_exec_name"),
-                rs.getString("html_style")
+                rs.getString("html_style"),
+                rs.getBoolean("skip_permission_check"),
+                rs.getBoolean("hidden")
         );
     }
 
