@@ -8,6 +8,7 @@ import org.leolo.nrinfo.exception.ValidationException;
 import org.leolo.nrinfo.exception.WebValidationException;
 import org.leolo.nrinfo.model.AuthenticationResult;
 import org.leolo.nrinfo.service.ConfigurationService;
+import org.leolo.nrinfo.service.CurrentUserService;
 import org.leolo.nrinfo.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,8 @@ public class WebAuthenticationController {
     private UserService userService;
     @Autowired
     private ConfigurationService configurationService;
+    @Autowired
+    private CurrentUserService currentUserService;
 
     @RequestMapping(path = "/login", method = RequestMethod.POST)
     public String doLogin(
@@ -69,6 +72,59 @@ public class WebAuthenticationController {
             authLogger.info("FAILED;{};{};{}", ar.getUserId(), request.getRemoteAddr(), ar.getMessage());
             return "redirect:/login";
         }
+    }
+
+    @GetMapping("/change_password")
+    public String changePassword(Model model, RedirectAttributes redirectAttributes) {
+        if (!currentUserService.isAuthenticated()) {
+            redirectAttributes.addFlashAttribute("destination","/change_password");
+            return "redirect:/login";
+        }
+        fillRegistrationParameters(model);
+        return "change_password";
+    }
+
+    @PostMapping("/change_password")
+    public String changePassword(
+            Model model,
+            RedirectAttributes redirectAttributes,
+            @RequestParam("old_password") String oldPassword,
+            @RequestParam("new_password") String newPassword,
+            @RequestParam("confirm_password") String confirmPassword
+    ) {
+        logger.debug("Attempting to change password");
+        if (!currentUserService.isAuthenticated()) {
+            model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Your session has expired, please login again.");
+            redirectAttributes.addFlashAttribute("destination","/change_password");
+            return "redirect:/login";
+        }
+        if (
+                oldPassword == null || oldPassword.isEmpty()
+                || newPassword == null || newPassword.isEmpty()
+                || confirmPassword == null || confirmPassword.isEmpty()
+        ) {
+            //Incomplete request
+            model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Your request cannot be processed. Please try again.");
+            fillRegistrationParameters(model);
+            return "change_password";
+        }
+        if (!newPassword.equals(confirmPassword)) {
+            //Password does not match
+            model.addAttribute("emPass", "Password does not match");
+            fillRegistrationParameters(model);
+            return "change_password";
+        }
+        try {
+            userService.changePassword(currentUserService.getUserId(), oldPassword, newPassword);
+        } catch (ValidationException ve) {
+            logger.info("Unable to change password for user #{} - {}", currentUserService.getUserId(), ve.getMessage());
+            model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, ve.getMessage());
+            fillRegistrationParameters(model);
+            return "change_password";
+        }
+//        model.addAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Password changed successfully");
+        redirectAttributes.addFlashAttribute(Constants.Model.GENERIC_POPUP_MESSAGE, "Password changed successfully");
+        return "redirect:/";
     }
 
     @RequestMapping("/logout")

@@ -15,6 +15,12 @@
 <a href="/schedule_search"><div class="tgroup">Search train schedule</div></a>
 <th:block th:if="${authStatus=='Y'}">
     <a href="preference"><div class="tgroup">Your Preferences</div></a>
+    <a href="change_password"><div class="tgroup">Change password</div></a>
+</th:block>
+<th:block th:if="${isAdmin}">
+    <a href="/report" th:if="${@displayControlService.hasPermission('GEN_REPORT')}">
+        <div class="tgroup">Generate Report</div>
+    </a>
 </th:block>
 <div th:replace="~{fragments/basic.html :: footer}"></div>
 </body>

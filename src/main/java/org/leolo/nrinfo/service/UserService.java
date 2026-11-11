@@ -6,6 +6,7 @@ import org.leolo.nrinfo.dao.UserAttributeDao;
 import org.leolo.nrinfo.dao.UserDao;
 import org.leolo.nrinfo.dao.UserPreferenceDao;
 import org.leolo.nrinfo.dto.request.UserRegister;
+import org.leolo.nrinfo.exception.ValidationException;
 import org.leolo.nrinfo.exception.WebValidationException;
 import org.leolo.nrinfo.model.AuthenticationResult;
 import org.leolo.nrinfo.model.User;
@@ -112,6 +113,17 @@ public class UserService {
         }
     }
 
+    public boolean reVerifyPassword(int userId, String password) {
+        User user = getUserById(userId);
+        if (passwordService.checkPassword(password, user.getPassword())) {
+            log.info("Re-verified password for user {}", user.getUsername());
+            return true;
+        } else {
+            log.info("Re-verified password for user {} failed", user.getUsername());
+            return false;
+        }
+    }
+
     public String generatePasswordResetToken(int userId, int validity) {
         if (userId <= 0 || validity <= 0) {
             throw new IllegalArgumentException("Invalid user id or validity");
@@ -191,7 +203,19 @@ public class UserService {
     }
 
     public void changePassword(int userId, String oldPassword, String newPassword) {
-
+        //Step 1: check is new password OK
+        if (!checkPasswordComplexity(newPassword)) {
+            throw new ValidationException("Provided password does not meet complexity requirements");
+        }
+        if (!reVerifyPassword(userId, oldPassword)) {
+            throw new ValidationException("Old password is not correct");
+        }
+        try {
+            userDao.updatePassword(userId, passwordService.encryptPassword(newPassword));
+            log.info("Changed password for user {}", userId);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public List<String> generateInviteKeys(int count) {
