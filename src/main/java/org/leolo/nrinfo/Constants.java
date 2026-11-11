@@ -43,6 +43,10 @@ public class Constants {
         public static final String PURGE_CACHE = "PURGE_CONF_CACHE";
 
         public static final String VIEW_OTHER_USERS = "VIEW_USERS";
+        public static final String ADMIN_FUNC_IN_MENU = "ADMIN_IN_MENU";
+
+        public static final String GENERATE_REPORTS = "GEN_REPORT";
+        public static final String GENERATE_ANY_REPORTS = "GEN_ANY_REPORT";
     }
 
     public static class UserPreferences {
@@ -52,6 +56,10 @@ public class Constants {
 
     public static class Configuration {
         public static final String ALLOW_REGISTER = "allow_register";
+
+        public static final String REPORT_GENERATION_THREAD_POOL_SIZE = "report.threadpool.size";
+
+        public static final String MAX_REPORT_AGE = "report.max_age";
     }
 
     public static class SQLTypes {
