@@ -3,6 +3,7 @@ package org.leolo.nrinfo.interceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.leolo.nrinfo.service.APIAuthenticationService;
+import org.leolo.nrinfo.service.CurrentUserService;
 import org.leolo.nrinfo.service.WebAuthenticationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,8 @@ public class AuthInterceptor implements HandlerInterceptor {
     private APIAuthenticationService authenticationService;
     @Autowired
     private WebAuthenticationService webAuthenticationService;
+    @Autowired
+    private CurrentUserService currentUserService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -46,6 +49,7 @@ public class AuthInterceptor implements HandlerInterceptor {
             if (webAuthenticationService.isAuthenticated()) {
                 logger.debug("Authenticated by session");
                 authenticationService.setWebAuthenticationService(webAuthenticationService);
+                currentUserService.setUserId(webAuthenticationService.getUserId());
             }
         }
         return HandlerInterceptor.super.preHandle(request, response, handler);

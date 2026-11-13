@@ -17,6 +17,7 @@ public class CurrentUserService {
     private Logger logger = LoggerFactory.getLogger(getClass());
 
     public void setUserId(int userId) {
+        logger.info("<CUS> Setting user id to " + userId);
         if (userId == 0) {
             return;
         }

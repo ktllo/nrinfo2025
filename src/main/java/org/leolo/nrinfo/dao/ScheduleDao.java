@@ -901,7 +901,7 @@ public class ScheduleDao extends BaseDao {
      * @return {@code true} if the schedule is marked as starred for the user; {@code false} otherwise
      * @throws SQLException if a database access error occurs or the connection is closed
      */
-    public boolean isScheduleStarred(int userId, UUID scheduleId) throws SQLException {
+    public boolean isScheduleStarred(int userId, UUID scheduleId, Date scheduleDate) throws SQLException {
         try (
                 Connection conn = ds.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(
@@ -913,34 +913,37 @@ public class ScheduleDao extends BaseDao {
                             WHERE
                                 user_id = ?
                                 AND schedule_id = ?
+                                AND schedule_date = ?
                             """
                 )
         ) {
             pstmt.setInt(1, userId);
             pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            setDate(pstmt, 3, scheduleDate);
             try (ResultSet rs = pstmt.executeQuery()) {
                 return rs.next();
             }
         }
     }
 
-    public void starSchedule(int userId, UUID scheduleId) throws SQLException {
+    public void starSchedule(int userId, UUID scheduleId, Date scheduleDate) throws SQLException {
         try (
                 Connection conn = ds.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(
                         """
-                            INSERT IGNORE INTO stared_schedule (user_id, schedule_id, created_time) 
-                            VALUES (?,?,NOW())
+                            INSERT IGNORE INTO stared_schedule (user_id, schedule_id, created_time, schedule_date)
+                            VALUES (?,?,NOW(), ?)
                             """
                 )
         ) {
             pstmt.setInt(1, userId);
             pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            setDate(pstmt, 3, scheduleDate);
             pstmt.executeUpdate();
         }
     }
 
-    public void unstarSchedule(int userId, UUID scheduleId) throws SQLException {
+    public void unstarSchedule(int userId, UUID scheduleId, Date scheduleDate) throws SQLException {
         try (
                 Connection conn = ds.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(
@@ -952,6 +955,7 @@ public class ScheduleDao extends BaseDao {
         ) {
             pstmt.setInt(1, userId);
             pstmt.setBytes(2, CommonUtil.uuidToBytes(scheduleId));
+            setDate(pstmt, 3, scheduleDate);
             pstmt.executeUpdate();
         }
     }

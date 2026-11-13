@@ -166,7 +166,7 @@ public class WebScheduleSearchController {
             model.addAttribute("schedules", scheduleEntries);
             model.addAttribute("hasPass", hasPass);
             model.addAttribute("showPass", userPreferenceService.getBoolean(Constants.UserPreferences.SHOW_SCHEDULE_PASS));
-            model.addAttribute("starred", userScheduleService.isScheduleStarred(searchedSchedule));
+            model.addAttribute("starred", userScheduleService.isScheduleStarred(searchedSchedule, parsedDate));
             model.addAttribute("uid", uid);
             model.addAttribute("date", date);
             return "schedule";

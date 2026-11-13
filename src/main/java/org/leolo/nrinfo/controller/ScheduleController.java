@@ -275,7 +275,7 @@ public class ScheduleController {
         }
 
         if (currentUserService.isAuthenticated()) {
-            trainSchedule.setStarred(userScheduleService.isScheduleStarred(schedule));
+            trainSchedule.setStarred(userScheduleService.isScheduleStarred(schedule, parsedDate));
         }
         return ResponseEntity.ok(Map.of("result","success", "schedule", trainSchedule));
     }
@@ -469,7 +469,7 @@ public class ScheduleController {
             return ResponseUtil.buildNotFoundResponse();
         }
         try {
-            userScheduleService.starSchedule(scheduleUUID);
+            userScheduleService.starSchedule(scheduleUUID, parsedDate);
         } catch (OperationNotPermittedException onpe) {
             return ResponseEntity.status(onpe.getStatus()).body(Map.of("result", "failed", "message", onpe.getMessage()));
         }
@@ -502,7 +502,7 @@ public class ScheduleController {
             //No schedule is available
             return ResponseUtil.buildNotFoundResponse();
         }
-        userScheduleService.unstarSchedule(scheduleUUID);
+        userScheduleService.unstarSchedule(scheduleUUID, parsedDate);
         return ResponseEntity.ok(Map.of("result","success"));
     }
 

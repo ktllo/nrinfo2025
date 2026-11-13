@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -34,19 +35,19 @@ public class UserScheduleService {
         }
     }
 
-    public boolean isScheduleStarred(Schedule schedule) {
-        return isScheduleStarred(schedule.getScheduleUuid());
+    public boolean isScheduleStarred(Schedule schedule, Date scheduleDate) {
+        return isScheduleStarred(schedule.getScheduleUuid(), scheduleDate);
     }
 
-    public boolean isScheduleStarred(UUID uuid) {
+    public boolean isScheduleStarred(UUID uuid, Date scheduleDate) {
         try {
-            return scheduleDao.isScheduleStarred(currentUserService.getUserId(), uuid);
+            return scheduleDao.isScheduleStarred(currentUserService.getUserId(), uuid, scheduleDate);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void starSchedule(UUID scheduleUUID) {
+    public void starSchedule(UUID scheduleUUID, Date scheduleDate) {
         if (!currentUserService.isAuthenticated()) {
             throw new OperationNotPermittedException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
@@ -57,18 +58,18 @@ public class UserScheduleService {
             throw new OperationNotPermittedException(HttpStatus.CONFLICT, "You have starred too many schedules");
         }
         try {
-            scheduleDao.starSchedule(currentUserService.getUserId(), scheduleUUID);
+            scheduleDao.starSchedule(currentUserService.getUserId(), scheduleUUID, scheduleDate);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public void unstarSchedule(UUID scheduleUUID) {
+    public void unstarSchedule(UUID scheduleUUID, Date scheduleDate) {
         if (!currentUserService.isAuthenticated()) {
             throw new OperationNotPermittedException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
         try {
-            scheduleDao.unstarSchedule(currentUserService.getUserId(), scheduleUUID);
+            scheduleDao.unstarSchedule(currentUserService.getUserId(), scheduleUUID, scheduleDate);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
